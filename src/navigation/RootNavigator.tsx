@@ -8,7 +8,7 @@ import { MerchantNavigator } from './MerchantNavigator';
 import { theme } from '../utils/theme';
 
 export const RootNavigator: React.FC = () => {
-  const { isAuthenticated, role, isLoading } = useAuth();
+  const { isAuthenticated, isGuest, role, isLoading } = useAuth();
 
   return (
     <NavigationContainer>
@@ -16,7 +16,7 @@ export const RootNavigator: React.FC = () => {
         <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
-      ) : !isAuthenticated ? (
+      ) : (!isAuthenticated && !isGuest) ? (
         <AuthNavigator />
       ) : role === 'merchant' || role === 'administrator' ? (
         <MerchantNavigator />

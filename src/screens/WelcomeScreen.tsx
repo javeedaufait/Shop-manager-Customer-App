@@ -3,6 +3,7 @@ import { View, Text, StyleSheet,  TouchableOpacity, ScrollView } from 'react-nat
 import { theme } from '../utils/theme';
 import { Header } from '../components/common/Header';
 import { useLocalization } from '../hooks/useLocalization';
+import { useAuth } from '../hooks/useAuth';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/types';
 
@@ -12,6 +13,7 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   const { t } = useLocalization();
+  const { continueAsGuest } = useAuth();
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -147,5 +149,22 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textMuted,
     textAlign: 'center',
+  },
+  guestBtn: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.base,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: theme.spacing.xs,
+    ...theme.shadows.sm,
+  },
+  guestBtnText: {
+    ...theme.typography.smallBold,
+    color: theme.colors.primary,
+    fontSize: 14,
   },
 });

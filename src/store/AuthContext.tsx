@@ -11,6 +11,8 @@ interface AuthContextType {
   token: string | null;
   role: UserRole | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
+  continueAsGuest: () => void;
   isLoading: boolean;
   language: SupportedLanguage;
   setLanguage: (lang: SupportedLanguage) => Promise<void>;
@@ -26,6 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isGuest, setIsGuest] = useState<boolean>(false);
   const [language, setLanguageState] = useState<SupportedLanguage>(ENV.defaultLanguage);
 
   // Initialize Auth & Language on boot
@@ -66,7 +69,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initialize();
   }, []);
 
+  const continueAsGuest = () => {
+    setIsGuest(true);
+  };
+
   const handleClearSession = async () => {
+    setIsGuest(false);
     setUser(null);
     setToken(null);
     apiClient.setToken(null);
@@ -148,6 +156,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         register,
         logout,
         refreshProfile,
+        isGuest,
+        continueAsGuest,
       }}
     >
       {children}
