@@ -133,6 +133,14 @@ export const CustomerRegisterScreen: React.FC<CustomerRegisterScreenProps> = ({ 
             loading={submitting}
             style={styles.registerBtn}
           />
+
+          <TouchableOpacity
+            style={styles.guestBtn}
+            activeOpacity={0.8}
+            onPress={continueAsGuest}
+          >
+            <Text style={styles.guestBtnText}>📍 Skip for now & Explore Nearby Stores →</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet,  TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { theme } from '../utils/theme';
 import { Header } from '../components/common/Header';
 import { useLocalization } from '../hooks/useLocalization';
@@ -21,14 +21,30 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.heroSection}>
           <View style={styles.brandBadge}>
-            <Text style={styles.badgeText}>🛒 {t('common.appName')}</Text>
+            <Text style={styles.badgeText}>⚡ {t('common.appName')}</Text>
           </View>
           <Text style={styles.heroTitle}>{t('welcome.heroTitle')}</Text>
           <Text style={styles.heroSubtitle}>{t('welcome.heroSubtitle')}</Text>
         </View>
 
         <View style={styles.choiceSection}>
-          {/* Customer Choice Card */}
+          {/* 1. Explore Nearby Stores (Direct Guest Discovery) */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.choiceCard, styles.guestCard]}
+            onPress={continueAsGuest}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: '#dcfce7' }]}>
+              <Text style={styles.cardIcon}>📍</Text>
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={[styles.cardTitle, { color: '#16a34a' }]}>Explore Nearby Stores</Text>
+              <Text style={styles.cardDesc}>Browse neighborhood shops & live distance as guest</Text>
+            </View>
+            <Text style={[styles.arrowText, { color: '#16a34a' }]}>→</Text>
+          </TouchableOpacity>
+
+          {/* 2. Customer Choice Card */}
           <TouchableOpacity
             activeOpacity={0.85}
             style={styles.choiceCard}
@@ -44,7 +60,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             <Text style={styles.arrowText}>→</Text>
           </TouchableOpacity>
 
-          {/* Merchant Choice Card */}
+          {/* 3. Merchant Choice Card */}
           <TouchableOpacity
             activeOpacity={0.85}
             style={[styles.choiceCard, styles.merchantCard]}
@@ -68,7 +84,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  
   container: {
     flexGrow: 1,
     paddingHorizontal: theme.spacing.xl,
@@ -115,6 +130,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     ...theme.shadows.sm,
   },
+  guestCard: {
+    borderColor: '#86efac',
+    backgroundColor: '#f0fdf4',
+  },
   merchantCard: {
     borderColor: '#cbd5e1',
   },
@@ -149,22 +168,5 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textMuted,
     textAlign: 'center',
-  },
-  guestBtn: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.base,
-    borderRadius: theme.borderRadius.lg,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing.xs,
-    ...theme.shadows.sm,
-  },
-  guestBtnText: {
-    ...theme.typography.smallBold,
-    color: theme.colors.primary,
-    fontSize: 14,
   },
 });

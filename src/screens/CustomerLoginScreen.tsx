@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet,  ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { theme } from '../utils/theme';
 import { Header } from '../components/common/Header';
 import { Input } from '../components/common/Input';
@@ -99,6 +99,15 @@ export const CustomerLoginScreen: React.FC<CustomerLoginScreenProps> = ({ naviga
             loading={submitting}
             style={styles.loginBtn}
           />
+
+          {/* Skip Login & Explore as Guest Button */}
+          <TouchableOpacity
+            style={styles.guestBtn}
+            activeOpacity={0.8}
+            onPress={continueAsGuest}
+          >
+            <Text style={styles.guestBtnText}>📍 Skip Login & Explore Nearby Stores →</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
@@ -115,7 +124,6 @@ export const CustomerLoginScreen: React.FC<CustomerLoginScreenProps> = ({ naviga
 };
 
 const styles = StyleSheet.create({
-  
   container: {
     flexGrow: 1,
     paddingHorizontal: theme.spacing.xl,
@@ -151,6 +159,9 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
+  loginBtn: {
+    marginTop: theme.spacing.md,
+  },
   guestBtn: {
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -166,9 +177,6 @@ const styles = StyleSheet.create({
     ...theme.typography.smallBold,
     color: '#16a34a',
     fontSize: 14,
-  },
-  loginBtn: {
-    marginTop: theme.spacing.md,
   },
   footer: {
     flexDirection: 'row',
