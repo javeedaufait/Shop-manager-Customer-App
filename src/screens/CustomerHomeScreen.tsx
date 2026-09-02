@@ -8,13 +8,20 @@ import { RoleBadge } from '../components/common/RoleBadge';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalization } from '../hooks/useLocalization';
 
-export const CustomerHomeScreen: React.FC = () => {
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CustomerStackParamList } from '../navigation/types';
+
+interface CustomerHomeScreenProps {
+  navigation: NativeStackNavigationProp<CustomerStackParamList, 'CustomerHome'>;
+}
+
+export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { t } = useLocalization();
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <Header title={t('common.appName')} />
+      <Header title={t('home.profileTitle')} onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined} />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.heroCard}>
           <Text style={styles.greeting}>{t('home.customerGreeting')}</Text>

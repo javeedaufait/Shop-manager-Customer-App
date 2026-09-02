@@ -8,6 +8,9 @@ export type AuthStackParamList = {
 };
 
 export type CustomerStackParamList = {
+  NearbyShops: undefined;
+  LocationPermission: undefined;
+  AreaSelect: undefined;
   CustomerHome: undefined;
 };
 

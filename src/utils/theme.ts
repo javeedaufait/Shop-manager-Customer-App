@@ -36,6 +36,7 @@ export const theme = {
     sm: 8,
     md: 12,
     lg: 16,
+    xl: 20,
     full: 9999,
   },
   typography: {
@@ -47,6 +48,7 @@ export const theme = {
     small: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18 },
     smallBold: { fontSize: 13, fontWeight: '600' as const, lineHeight: 18 },
     caption: { fontSize: 11, fontWeight: '500' as const, lineHeight: 14 },
+    button: { fontSize: 16, fontWeight: '600' as const, lineHeight: 20 },
   },
   shadows: {
     sm: {
