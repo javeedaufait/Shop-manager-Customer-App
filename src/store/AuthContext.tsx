@@ -89,44 +89,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (payload: LoginPayload) => {
-    setIsLoading(true);
-    try {
-      const data = await authApi.login(payload);
-      setUser(data.user);
-      setToken(data.token);
-      apiClient.setToken(data.token);
+    const data = await authApi.login(payload);
+    setUser(data.user);
+    setToken(data.token);
+    apiClient.setToken(data.token);
 
-      await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
-      await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
-    } finally {
-      setIsLoading(false);
-    }
+    await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
+    await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
   };
 
   const register = async (payload: RegisterPayload) => {
-    setIsLoading(true);
-    try {
-      const data = await authApi.register(payload);
-      setUser(data.user);
-      setToken(data.token);
-      apiClient.setToken(data.token);
+    const data = await authApi.register(payload);
+    setUser(data.user);
+    setToken(data.token);
+    apiClient.setToken(data.token);
 
-      await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
-      await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
-    } finally {
-      setIsLoading(false);
-    }
+    await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
+    await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
   };
 
   const logout = async () => {
-    setIsLoading(true);
     try {
       await authApi.logout();
     } catch (e) {
       console.warn('Backend logout warning:', e);
     } finally {
       await handleClearSession();
-      setIsLoading(false);
     }
   };
 

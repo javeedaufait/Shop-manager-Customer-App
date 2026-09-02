@@ -17,7 +17,7 @@ interface CustomerLoginScreenProps {
 }
 
 export const CustomerLoginScreen: React.FC<CustomerLoginScreenProps> = ({ navigation }) => {
-  const { login } = useAuth();
+  const { login, continueAsGuest } = useAuth();
   const { t } = useLocalization();
 
   const [username, setUsername] = useState('');
@@ -150,6 +150,22 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
+  },
+  guestBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: theme.spacing.md,
+  },
+  guestBtnText: {
+    ...theme.typography.smallBold,
+    color: '#16a34a',
+    fontSize: 14,
   },
   loginBtn: {
     marginTop: theme.spacing.md,
