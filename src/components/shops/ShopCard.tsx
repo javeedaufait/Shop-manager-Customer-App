@@ -34,14 +34,14 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
         )}
 
         {/* Distance Badge */}
-        {shop.distance_text && (
+        {shop.distance_text ? (
           <View style={styles.distanceBadge}>
             <Text style={styles.distancePin}>📍</Text>
             <Text style={styles.distanceText}>
               {shop.distance_text} {t('shops.kmAway')}
             </Text>
           </View>
-        )}
+        ) : null}
 
         {/* Status Badge */}
         <View
@@ -83,7 +83,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
         <Text style={styles.type}>{shop.shop_type}</Text>
 
         <View style={styles.addressRow}>
-          <Text style={styles.addressPin}>🗺️</Text>
+          <Text style={styles.addressPin}>📍</Text>
           <Text style={styles.address} numberOfLines={2}>
             {shop.address || 'Neighborhood Store'}
           </Text>
@@ -92,7 +92,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
         {/* Footer features */}
         <View style={styles.footer}>
           <View style={styles.pickupPill}>
-            <Text style={styles.pickupText}>⚡ {t('shops.pickupReady')}</Text>
+            <Text style={styles.pickupText}>📦 {t('shops.pickupReady')}</Text>
           </View>
 
           <View style={styles.viewShopBtn}>

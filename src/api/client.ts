@@ -36,19 +36,16 @@ class ApiClient {
 
   constructor() {
     let rawUrl = ENV.apiUrl;
-    try {
-      const parsed = new URL(rawUrl);
-      if (parsed.username && parsed.password) {
-        this.basicAuthHeader = `Basic ${encodeBase64(`${decodeURIComponent(parsed.username)}:${decodeURIComponent(parsed.password)}`)}`;
-        // Strip credentials from baseUrl to keep clean
-        parsed.username = '';
-        parsed.password = '';
-        this.baseUrl = parsed.toString().replace(/\/$/, '');
-      } else {
-        this.baseUrl = rawUrl;
-      }
-    } catch (e) {
-      this.baseUrl = rawUrl;
+    const match = rawUrl.match(/^https?:\/\/([^:]+):([^@]+)@(.+)$/);
+    if (match) {
+      const user = match[1];
+      const pass = match[2];
+      const rest = match[3];
+      const protocol = rawUrl.startsWith('https') ? 'https://' : 'http://';
+      this.basicAuthHeader = `Basic ${encodeBase64(`${decodeURIComponent(user)}:${decodeURIComponent(pass)}`)}`;
+      this.baseUrl = `${protocol}${rest}`.replace(/\/$/, '');
+    } else {
+      this.baseUrl = rawUrl.replace(/\/$/, '');
     }
   }
 
@@ -67,13 +64,12 @@ class ApiClient {
     const token = await this.getStoredToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       ...customHeaders,
     };
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      // Keep tunnel basic auth in X-Tunnel header if needed
       if (this.basicAuthHeader) {
         headers['X-Tunnel-Authorization'] = this.basicAuthHeader;
       }

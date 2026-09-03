@@ -63,10 +63,8 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
   }, [location, t]);
 
   useEffect(() => {
-    if (!locationLoading) {
-      fetchShops();
-    }
-  }, [location, locationLoading, fetchShops]);
+    fetchShops();
+  }, [fetchShops]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -78,18 +76,22 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
     if (!q) return true;
     return (
       s.name.toLowerCase().includes(q) ||
-      (s.shop_type && s.shop_type.toLowerCase().includes(q)) ||
-      (s.address && s.address.toLowerCase().includes(q))
+      s.shop_type.toLowerCase().includes(q) ||
+      s.address.toLowerCase().includes(q)
     );
   });
 
-  const activeAreaLabel = location?.areaName || t('location.currentLocation');
+  const locationDisplayText = location?.areaName
+    ? location.areaName
+    : location?.latitude
+    ? t('location.currentLocation')
+    : t('location.currentLocation');
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header />
 
-      {/* Location Bar / Selector */}
+      {/* Top Location Selector Bar */}
       <View style={styles.locationBar}>
         <TouchableOpacity
           style={styles.locationSelector}
@@ -97,12 +99,12 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           onPress={() => navigation.navigate('AreaSelect')}
         >
           <View style={styles.pinCircle}>
-            <Text style={styles.pinIcon}>📍</Text>
+            <Text style={styles.pinIcon}>ðŸ“</Text>
           </View>
           <View style={styles.locationTextWrap}>
-            <Text style={styles.locationSubText}>Near You in</Text>
+            <Text style={styles.locationSubText}>{'Near You in'}</Text>
             <Text style={styles.locationTitle} numberOfLines={1}>
-              {activeAreaLabel}
+              {locationDisplayText}
             </Text>
           </View>
           <Text style={styles.changeBtnText}>{t('location.changeLocation')}</Text>
@@ -110,28 +112,29 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
 
         <TouchableOpacity
           style={styles.profileBtn}
-          onPress={() => navigation.navigate('CustomerHome')}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
+          onPress={() => {
+            navigation.navigate('AreaSelect');
+          }}
         >
-          <Text style={styles.profileIcon}>👤</Text>
+          <Text style={styles.profileIcon}>ðŸ‘¤</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Search Input Filter */}
+      {/* Search Input */}
       <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Text style={styles.searchIcon}>ðŸ”</Text>
         <TextInput
           style={styles.searchInput}
           placeholder={t('shops.searchPlaceholder')}
           placeholderTextColor={theme.colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          autoCorrect={false}
           clearButtonMode="while-editing"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.clearIcon}>✕</Text>
+            <Text style={styles.clearIcon}>âœ•</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -146,42 +149,17 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
       ) : error ? (
         /* State 4: Error State */
         <View style={styles.centerContainer}>
-          <Text style={styles.stateEmoji}>⚠️</Text>
+          <Text style={styles.stateEmoji}>âš ï¸</Text>
           <Text style={styles.stateTitle}>{t('shops.errorTitle')}</Text>
           <Text style={styles.stateSubtitle}>{error}</Text>
           <TouchableOpacity style={styles.primaryActionBtn} onPress={fetchShops}>
             <Text style={styles.primaryActionBtnText}>{t('shops.retryBtn')}</Text>
           </TouchableOpacity>
         </View>
-      ) : !location?.latitude && !location?.areaName ? (
-        /* State 3: Location Unavailable State */
-        <View style={styles.centerContainer}>
-          <Text style={styles.stateEmoji}>📍</Text>
-          <Text style={styles.stateTitle}>{t('shops.locationUnavailableTitle')}</Text>
-          <Text style={styles.stateSubtitle}>{t('shops.locationUnavailableSubtitle')}</Text>
-          <View style={styles.btnRow}>
-            <TouchableOpacity
-              style={styles.primaryActionBtn}
-              onPress={async () => {
-                const ok = await requestCurrentLocation();
-                if (!ok) navigation.navigate('LocationPermission');
-              }}
-            >
-              <Text style={styles.primaryActionBtnText}>{t('shops.enableLocation')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.secondaryActionBtn}
-              onPress={() => navigation.navigate('AreaSelect')}
-            >
-              <Text style={styles.secondaryActionBtnText}>{t('location.selectManually')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       ) : filteredShops.length === 0 ? (
         /* State 2: Empty State */
         <View style={styles.centerContainer}>
-          <Text style={styles.stateEmoji}>🏪</Text>
+          <Text style={styles.stateEmoji}>ðŸª</Text>
           <Text style={styles.stateTitle}>{t('shops.emptyTitle')}</Text>
           <Text style={styles.stateSubtitle}>{t('shops.emptySubtitle')}</Text>
           <TouchableOpacity
@@ -217,7 +195,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
             <ShopCard
               shop={item}
               onPress={() => {
-                // Product browsing reserved for future phase
+                // Reserved for future catalog viewing
               }}
             />
           )}
@@ -374,10 +352,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: theme.spacing.md,
   },
-  btnRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
   primaryActionBtn: {
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
@@ -388,17 +362,5 @@ const styles = StyleSheet.create({
   primaryActionBtnText: {
     ...theme.typography.button,
     color: '#ffffff',
-  },
-  secondaryActionBtn: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-  },
-  secondaryActionBtnText: {
-    ...theme.typography.button,
-    color: theme.colors.primary,
   },
 });
