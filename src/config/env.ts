@@ -5,7 +5,7 @@
 // In development, LocalWP is accessible at http://nearmart.local
 // For Android Emulators, 10.0.2.2 points to host localhost
 // For physical devices, you can provide your local LAN IP
-const DEV_API_URL = 'http://nearmart.local/wp-json/nearmart/v1';
+const DEV_API_URL = 'https://flowers:invincible@instinctive-bell.localsite.io/wp-json/nearmart/v1';
 const PROD_API_URL = 'https://nearmart.in/wp-json/nearmart/v1';
 
 export const ENV = {

@@ -4,12 +4,52 @@ import { storageService } from '../services/storageService';
 import { parseApiError } from '../services/errorHandler';
 import { getI18nLanguage } from '../i18n';
 
+function encodeBase64(input: string): string {
+  try {
+    if (typeof btoa === 'function') {
+      return btoa(input);
+    }
+  } catch (e) {
+    // Fallback
+  }
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let str = input;
+  let output = '';
+  for (
+    let block = 0, charCode = 0, i = 0, map = chars;
+    str.charAt(i | 0) || ((map = '='), i % 1);
+    output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))
+  ) {
+    charCode = str.charCodeAt((i += 3 / 4));
+    if (charCode > 0xff) {
+      throw new Error('Base64 encoding failed: characters outside Latin1 range.');
+    }
+    block = (block << 8) | charCode;
+  }
+  return output;
+}
+
 class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
+  private basicAuthHeader: string | null = null;
 
   constructor() {
-    this.baseUrl = ENV.apiUrl;
+    let rawUrl = ENV.apiUrl;
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.username && parsed.password) {
+        this.basicAuthHeader = `Basic ${encodeBase64(`${decodeURIComponent(parsed.username)}:${decodeURIComponent(parsed.password)}`)}`;
+        // Strip credentials from baseUrl to keep clean
+        parsed.username = '';
+        parsed.password = '';
+        this.baseUrl = parsed.toString().replace(/\/$/, '');
+      } else {
+        this.baseUrl = rawUrl;
+      }
+    } catch (e) {
+      this.baseUrl = rawUrl;
+    }
   }
 
   public setToken(token: string | null) {
@@ -33,6 +73,12 @@ class ApiClient {
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      // Keep tunnel basic auth in X-Tunnel header if needed
+      if (this.basicAuthHeader) {
+        headers['X-Tunnel-Authorization'] = this.basicAuthHeader;
+      }
+    } else if (this.basicAuthHeader) {
+      headers['Authorization'] = this.basicAuthHeader;
     }
 
     return headers;
