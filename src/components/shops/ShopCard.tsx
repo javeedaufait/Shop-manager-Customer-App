@@ -29,7 +29,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
           />
         ) : (
           <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderIcon}>🏪</Text>
+            <Text style={styles.placeholderIcon}>🏬</Text>
           </View>
         )}
 
@@ -96,7 +96,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
           </View>
 
           <View style={styles.viewShopBtn}>
-            <Text style={styles.viewShopText}>{t('shops.viewShop')} →</Text>
+            <Text style={styles.viewShopText}>{t('shops.viewShop')} ›</Text>
           </View>
         </View>
       </View>

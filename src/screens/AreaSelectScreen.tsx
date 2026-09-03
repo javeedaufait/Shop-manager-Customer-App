@@ -131,7 +131,7 @@ export const AreaSelectScreen: React.FC<AreaSelectScreenProps> = ({ navigation }
           )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🗺️</Text>
+              <Text style={styles.emptyEmoji}>📍</Text>
               <Text style={styles.emptyTitle}>No matching areas found</Text>
               <TouchableOpacity
                 style={styles.customAreaBtn}

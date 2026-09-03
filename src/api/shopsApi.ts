@@ -125,7 +125,7 @@ export const shopsApi = {
 
     try {
       const response = await apiClient.get<NearbyShopsResponse>('/shops/nearby', queryParams);
-      if (response?.shops && response.shops.length > 0) {
+      if (response && Array.isArray(response.shops)) {
         return response;
       }
     } catch (err) {

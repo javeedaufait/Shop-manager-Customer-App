@@ -57,7 +57,7 @@ export const LocationPermissionScreen: React.FC<LocationPermissionScreenProps> =
         {/* Benefits list */}
         <View style={styles.benefitsContainer}>
           <View style={styles.benefitItem}>
-            <Text style={styles.benefitIcon}>🏬</Text>
+            <Text style={styles.benefitIcon}>⚡</Text>
             <View style={styles.benefitTextWrap}>
               <Text style={styles.benefitTitle}>Neighborhood Stores</Text>
               <Text style={styles.benefitDesc}>Find trusted local supermarkets right next door.</Text>
