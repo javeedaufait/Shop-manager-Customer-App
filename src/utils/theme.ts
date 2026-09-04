@@ -9,6 +9,7 @@ export const theme = {
     background: '#f8fafc',
     card: '#ffffff',
     text: '#0f172a',
+    textPrimary: '#0f172a',
     textSecondary: '#64748b',
     textMuted: '#94a3b8',
     border: '#e2e8f0',

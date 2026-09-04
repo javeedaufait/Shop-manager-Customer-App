@@ -1,11 +1,19 @@
 import { apiClient } from './client';
 import { NearbyShopsResponse, AreaHub, Shop } from '../types/shops';
+import { Product, ShopProductsResponse } from '../types/catalog';
 
 export interface NearbyShopsParams {
   lat?: number | null;
   lng?: number | null;
   radius?: number;
   area?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ShopProductsParams {
+  category?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -94,6 +102,121 @@ const FALLBACK_SHOPS: Shop[] = [
   },
 ];
 
+const FALLBACK_PRODUCTS: Product[] = [
+  {
+    id: 125,
+    name: 'Ashirvad Sharbati Select Atta 5kg',
+    description: '100% pure MP Sharbati wheat flour. Rotis remain soft and fluffy for hours. Carefully milled to lock in essential dietary fiber and natural wheat nutrition.',
+    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=60',
+    category: 'Atta & Flour',
+    brand: 'Ashirvad',
+    unit: '5kg',
+    barcode: '8901030383321',
+    price: 320,
+    sale_price: 285,
+    available: true,
+    stock_quantity: 45,
+  },
+  {
+    id: 126,
+    name: 'Milma Rich Full Cream Milk 500ml',
+    description: 'Fresh, pasteurized and homogenized full cream milk with 4.5% milk fat. Sourced daily from local Kerala dairy cooperative farmers.',
+    image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=60',
+    category: 'Dairy & Eggs',
+    brand: 'Milma',
+    unit: '500ml',
+    barcode: '8906008120019',
+    price: 28,
+    sale_price: null,
+    available: true,
+    stock_quantity: 60,
+  },
+  {
+    id: 127,
+    name: 'Eastern Kashmiri Chilli Powder 500g',
+    description: 'Distinctive vibrant red color with mild aromatic heat. Perfect for traditional Kerala curries, gravies, and fish dishes.',
+    image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop&q=60',
+    category: 'Masalas & Spices',
+    brand: 'Eastern',
+    unit: '500g',
+    barcode: '8901441001221',
+    price: 250,
+    sale_price: 219,
+    available: true,
+    stock_quantity: 30,
+  },
+  {
+    id: 128,
+    name: 'Fortune Sunlite Refined Sunflower Oil 1L',
+    description: 'Light, healthy and easy to digest refined sunflower cooking oil enriched with Vitamins A and D.',
+    image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=60',
+    category: 'Oils & Ghee',
+    brand: 'Fortune',
+    unit: '1L',
+    barcode: '8906007281018',
+    price: 180,
+    sale_price: 155,
+    available: true,
+    stock_quantity: 25,
+  },
+  {
+    id: 129,
+    name: 'Nirapara Matta Vadi Rice 5kg',
+    description: 'Traditional Kerala palakkadan matta rice. Rich in magnesium and essential nutrients, ideal for authentic Kerala meals.',
+    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=60',
+    category: 'Rice & Grains',
+    brand: 'Nirapara',
+    unit: '5kg',
+    barcode: '8904001810423',
+    price: 350,
+    sale_price: 320,
+    available: true,
+    stock_quantity: 50,
+  },
+  {
+    id: 130,
+    name: 'Elite Super Soft Milk Bread 400g',
+    description: 'Freshly baked golden crusted white bread enriched with milk goodness. Perfect for morning toast, sandwiches, and snacks.',
+    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=60',
+    category: 'Bakery & Snacks',
+    brand: 'Elite',
+    unit: '400g',
+    barcode: '8906002130113',
+    price: 45,
+    sale_price: 40,
+    available: true,
+    stock_quantity: 20,
+  },
+  {
+    id: 131,
+    name: 'Tata Salt Vacuum Evaporated 1kg',
+    description: 'Desh Ka Namak. Iodized table salt produced under high hygienic standards for balanced family health.',
+    image: 'https://images.unsplash.com/photo-1518843875459-f738682238a6?w=600&auto=format&fit=crop&q=60',
+    category: 'Essentials & Staples',
+    brand: 'Tata',
+    unit: '1kg',
+    barcode: '8901030010111',
+    price: 28,
+    sale_price: null,
+    available: false,
+    stock_quantity: 0,
+  },
+  {
+    id: 132,
+    name: 'Brooke Bond Red Label Natural Care Tea 500g',
+    description: 'Blend of quality tea with 5 Ayurvedic ingredients: Tulsi, Ashwagandha, Mulethi, Ginger and Cardamom.',
+    image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60',
+    category: 'Beverages',
+    brand: 'Brooke Bond',
+    unit: '500g',
+    barcode: '8901030712213',
+    price: 295,
+    sale_price: 260,
+    available: true,
+    stock_quantity: 18,
+  },
+];
+
 function calculateHaversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -132,7 +255,6 @@ export const shopsApi = {
       console.warn('Backend /shops/nearby unreachable, using resilient offline discovery:', err);
     }
 
-    // Resilient Fallback with Live Distance Computation
     let list = [...FALLBACK_SHOPS];
 
     if (params.lat && params.lng) {
@@ -142,7 +264,7 @@ export const shopsApi = {
           return {
             ...shop,
             distance_km: dist,
-            distance_text: dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist} km`,
+            distance_text: dist < 1 ? Math.round(dist * 1000) + ' m' : dist + ' km',
           };
         }
         return shop;
@@ -186,6 +308,76 @@ export const shopsApi = {
       pagination: {
         page: 1,
         limit: 20,
+        total: list.length,
+        total_pages: 1,
+      },
+    };
+  },
+
+  /**
+   * Fetch details for a specific shop.
+   */
+  async getShopDetails(shopId: number): Promise<{ shop: Shop }> {
+    try {
+      const response = await apiClient.get<{ shop: Shop }>('/shops/' + shopId);
+      if (response && response.shop) {
+        return response;
+      }
+    } catch (err) {
+      console.warn('Backend /shops/' + shopId + ' unreachable, using fallback:', err);
+    }
+
+    const matched = FALLBACK_SHOPS.find((s) => s.shop_id === shopId) || FALLBACK_SHOPS[0];
+    return { shop: matched };
+  },
+
+  /**
+   * Fetch customer product catalog for a specific shop.
+   */
+  async getShopProducts(
+    shopId: number,
+    params: ShopProductsParams = {}
+  ): Promise<ShopProductsResponse> {
+    const queryParams: Record<string, string | number> = {};
+    if (params.category) queryParams.category = params.category;
+    if (params.search) queryParams.search = params.search;
+    if (params.page) queryParams.page = params.page;
+    if (params.limit) queryParams.limit = params.limit || 50;
+
+    try {
+      const response = await apiClient.get<ShopProductsResponse>(
+        '/shops/' + shopId + '/products',
+        queryParams
+      );
+      if (response && Array.isArray(response.products)) {
+        return response;
+      }
+    } catch (err) {
+      console.warn('Backend /shops/' + shopId + '/products unreachable, using fallback:', err);
+    }
+
+    let list = [...FALLBACK_PRODUCTS];
+
+    if (params.category && params.category !== 'All') {
+      const catLow = params.category.toLowerCase().trim();
+      list = list.filter((p) => p.category.toLowerCase().includes(catLow));
+    }
+
+    if (params.search) {
+      const q = params.search.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          (p.brand && p.brand.toLowerCase().includes(q))
+      );
+    }
+
+    return {
+      products: list,
+      pagination: {
+        page: params.page || 1,
+        limit: params.limit || 50,
         total: list.length,
         total_pages: 1,
       },

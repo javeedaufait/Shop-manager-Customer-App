@@ -15,6 +15,7 @@ import { ShopCard } from '../components/shops/ShopCard';
 import { theme } from '../utils/theme';
 import { useLocalization } from '../hooks/useLocalization';
 import { useLocation } from '../hooks/useLocation';
+import { useCart } from '../hooks/useCart';
 import { shopsApi } from '../api/shopsApi';
 import { Shop } from '../types/shops';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,6 +29,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
   const insets = useSafeAreaInsets();
   const { t } = useLocalization();
   const { location, isLoading: locationLoading, requestCurrentLocation } = useLocation();
+  const { cart } = useCart();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,15 +124,20 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           <Text style={styles.changeBtnText}>{t('location.changeLocation')}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.profileBtn}
-          activeOpacity={0.8}
-          onPress={() => {
-            navigation.navigate('AreaSelect');
-          }}
-        >
-          <Text style={styles.profileIcon}>👤</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Cart')}
+          >
+            <Text style={styles.profileIcon}>🛍️</Text>
+            {cart.total_quantity > 0 && (
+              <View style={styles.headerCartBadge}>
+                <Text style={styles.headerCartBadgeText}>{cart.total_quantity}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Input */}
@@ -232,7 +239,11 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
             <ShopCard
               shop={item}
               onPress={() => {
-                // Reserved for Phase APP-5 product browsing
+                navigation.navigate('ShopCatalog', {
+                  shopId: item.shop_id,
+                  shopName: item.name,
+                  shop: item,
+                });
               }}
             />
           )}
@@ -297,6 +308,23 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     marginLeft: 6,
     textDecorationLine: 'underline',
+  },
+  headerCartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#DC2626',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  headerCartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
   },
   profileBtn: {
     width: 44,
