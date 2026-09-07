@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -38,12 +38,13 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
 
   const fetchOrders = useCallback(async () => {
     try {
+      // Fetch merchant orders from API
       const resp = await merchantApi.getOrders({
         search: searchQuery.trim() || undefined,
         fulfillment_status: activeTab !== 'all' ? activeTab : undefined,
         pricing_status: pricingFilter !== 'all' ? pricingFilter : undefined,
         payment_status: paymentFilter !== 'all' ? paymentFilter : undefined,
-        limit: 50,
+        limit: 100,
       });
       setOrders(resp.orders || []);
     } catch (err) {
@@ -58,7 +59,7 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
     setIsLoading(true);
     const timer = setTimeout(() => {
       fetchOrders();
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [fetchOrders]);
 
@@ -66,6 +67,77 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
     setIsRefreshing(true);
     fetchOrders();
   };
+
+  /**
+   * Client-side filter guarantees that tabs and chips filter instantaneously
+   * and stay resilient even if the remote staging server backend hasn't finished syncing.
+   */
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const orderStatus = (order.fulfillment_status || order.status || 'pending').toLowerCase();
+
+      // 1. Tab / Fulfillment Status Filter
+      if (activeTab === 'pending') {
+        if (orderStatus !== 'pending' && orderStatus !== 'accepted') {
+          return false;
+        }
+      } else if (activeTab === 'preparing') {
+        if (orderStatus !== 'preparing') {
+          return false;
+        }
+      } else if (activeTab === 'ready_for_pickup') {
+        if (orderStatus !== 'ready_for_pickup' && orderStatus !== 'ready') {
+          return false;
+        }
+      } else if (activeTab === 'completed') {
+        if (!['completed', 'cancelled', 'rejected'].includes(orderStatus)) {
+          return false;
+        }
+      }
+
+      // 2. Pricing Status Filter
+      const isStorePriced =
+        order.has_pending_prices ||
+        order.pricing_status === 'pending_verification' ||
+        (Array.isArray(order.items) && order.items.some((i) => i.pricing_type === 'store_priced'));
+
+      if (pricingFilter === 'store_priced' && !isStorePriced) {
+        return false;
+      }
+      if (pricingFilter === 'fixed' && isStorePriced) {
+        return false;
+      }
+
+      // 3. Payment Status Filter
+      const isPaid = order.payment_status === 'paid';
+      if (paymentFilter === 'paid' && !isPaid) {
+        return false;
+      }
+      if (paymentFilter === 'unpaid' && isPaid) {
+        return false;
+      }
+
+      // 4. Search Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const orderNum = (order.order_number || '').toLowerCase();
+        const pickup = (order.pickup_code || '').toLowerCase();
+        const custName = (order.customer_name || '').toLowerCase();
+        const custPhone = (order.customer_phone || '').toLowerCase();
+
+        if (
+          !orderNum.includes(q) &&
+          !pickup.includes(q) &&
+          !custName.includes(q) &&
+          !custPhone.includes(q)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [orders, activeTab, pricingFilter, paymentFilter, searchQuery]);
 
   const getStatusBadgeStyle = (status: OrderStatus) => {
     switch (status) {
@@ -90,7 +162,12 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
     if (order.pricing_status === 'finalized') {
       return { label: t('merchantOrders.badges.finalized'), bg: '#ECFDF5', text: '#059669' };
     }
-    if (order.has_pending_prices || order.pricing_status === 'pending_verification') {
+    const isStorePriced =
+      order.has_pending_prices ||
+      order.pricing_status === 'pending_verification' ||
+      (Array.isArray(order.items) && order.items.some((i) => i.pricing_type === 'store_priced'));
+
+    if (isStorePriced) {
       return { label: t('merchantOrders.badges.store_priced'), bg: '#FFF7ED', text: '#EA580C' };
     }
     return { label: t('merchantOrders.badges.fixed'), bg: '#F8FAFC', text: '#64748B' };
@@ -123,7 +200,10 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
       minute: '2-digit',
     });
 
-    const isEstimated = item.has_pending_prices || item.pricing_status === 'pending_verification';
+    const isEstimated =
+      item.has_pending_prices ||
+      item.pricing_status === 'pending_verification' ||
+      (Array.isArray(item.items) && item.items.some((i) => i.pricing_type === 'store_priced'));
 
     return (
       <TouchableOpacity
@@ -156,7 +236,7 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.itemsBadge}>
             <Text style={styles.itemsCountText}>
-              {item.item_count} {t('orders.items')}
+              {item.item_count || item.items?.length || 0} {t('orders.items')}
             </Text>
           </View>
         </View>
@@ -309,10 +389,10 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={orders}
+          data={filteredOrders}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderOrderItem}
-          contentContainerStyle={orders.length === 0 ? styles.emptyListContent : styles.listContent}
+          contentContainerStyle={filteredOrders.length === 0 ? styles.emptyListContent : styles.listContent}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

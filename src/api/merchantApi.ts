@@ -31,6 +31,7 @@ export const merchantApi = {
     if (params?.search) query.search = params.search;
     if (params?.fulfillment_status && params.fulfillment_status !== 'all') {
       query.fulfillment_status = params.fulfillment_status;
+      query.status = params.fulfillment_status;
     }
     if (params?.pricing_status && params.pricing_status !== 'all') {
       query.pricing_status = params.pricing_status;
