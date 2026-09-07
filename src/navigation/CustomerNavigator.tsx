@@ -9,6 +9,11 @@ import { ShopCatalogScreen } from '../screens/ShopCatalogScreen';
 import { ShopDetailsScreen } from '../screens/ShopDetailsScreen';
 import { ProductDetailScreen } from '../screens/ProductDetailScreen';
 import { CartScreen } from '../screens/CartScreen';
+import { CheckoutScreen } from '../screens/CheckoutScreen';
+import { OrderConfirmationScreen } from '../screens/OrderConfirmationScreen';
+import { OrderHistoryScreen } from '../screens/OrderHistoryScreen';
+import { OrderDetailsScreen } from '../screens/OrderDetailsScreen';
+import { OrderStatusScreen } from '../screens/OrderStatusScreen';
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
@@ -29,6 +34,11 @@ export const CustomerNavigator: React.FC = () => {
       <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
+      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+      <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+      <Stack.Screen name="OrderStatus" component={OrderStatusScreen} />
     </Stack.Navigator>
   );
 };

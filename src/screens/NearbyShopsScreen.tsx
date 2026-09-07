@@ -128,6 +128,13 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           <TouchableOpacity
             style={styles.profileBtn}
             activeOpacity={0.8}
+            onPress={() => navigation.navigate('OrderHistory')}
+          >
+            <Text style={styles.profileIcon}>📋</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            activeOpacity={0.8}
             onPress={() => navigation.navigate('Cart')}
           >
             <Text style={styles.profileIcon}>🛍️</Text>

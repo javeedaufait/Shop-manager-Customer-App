@@ -14,4 +14,17 @@ export const ENDPOINTS = {
   products: {
     detail: (productId: number) => `/products/${productId}`,
   },
+  cart: {
+    get: '/cart',
+    items: '/cart/items',
+    item: (itemId: string) => `/cart/items/${itemId}`,
+    clear: '/cart',
+    merge: '/cart/merge',
+  },
+  orders: {
+    create: '/orders',
+    list: '/orders',
+    detail: (orderId: number | string) => `/orders/${orderId}`,
+    status: (orderId: number | string) => `/orders/${orderId}/status`,
+  },
 };

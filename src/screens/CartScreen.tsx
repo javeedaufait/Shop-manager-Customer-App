@@ -35,11 +35,10 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleProceedToPickup = () => {
-    Alert.alert(
-      'Pickup Ready Notice',
-      `Your cart from ${cart.shop_name} contains ${cart.total_quantity} items totaling ₹${cart.subtotal}. Store pickup scheduling and payment processing will be available in Phase APP-7.`,
-      [{ text: 'OK' }]
-    );
+    if (!cart.items || cart.items.length === 0) {
+      return;
+    }
+    navigation.navigate('Checkout');
   };
 
   const isEmpty = !cart.items || cart.items.length === 0;
