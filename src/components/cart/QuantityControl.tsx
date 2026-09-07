@@ -127,9 +127,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   stepperSmall: {
-    height: 30,
-    minWidth: 84,
-    paddingHorizontal: 4,
+    height: 28,
+    minWidth: 72,
+    paddingHorizontal: 2,
   },
   stepperMedium: {
     height: 42,
@@ -145,8 +145,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepBtnSmall: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
   },
   stepBtnMedium: {
     width: 32,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   qtyTextSmall: {
     fontSize: 13,
-    minWidth: 20,
+    minWidth: 16,
   },
   qtyTextMedium: {
     fontSize: 16,

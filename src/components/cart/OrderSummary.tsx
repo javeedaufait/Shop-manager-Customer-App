@@ -2,33 +2,33 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Cart } from '../../types/cart';
 import { theme } from '../../utils/theme';
+import { useLocalization } from '../../hooks/useLocalization';
 
 interface OrderSummaryProps {
   cart: Cart;
 }
 
 export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart }) => {
+  const { t } = useLocalization();
   const hasStorePriced = cart.items.some(
     (it) => it.price <= 0 || (it as any).pricing_type === 'store_priced'
   );
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Bill Details</Text>
+      <Text style={styles.title}>{t('orders.summary')}</Text>
 
       <View style={styles.row}>
         <Text style={styles.label}>
-          {hasStorePriced
-            ? `Fixed Items Subtotal (${cart.total_quantity} items)`
-            : `Item Subtotal (${cart.total_quantity} ${cart.total_quantity === 1 ? 'item' : 'items'})`}
+          {hasStorePriced ? `${t('cart.fixedItemsSubtotal')} (${cart.total_quantity})` : `${t('cart.itemSubtotal')} (${cart.total_quantity})`}
         </Text>
         <Text style={styles.value}>₹{cart.subtotal}</Text>
       </View>
 
       <View style={styles.row}>
         <View style={styles.pickupLabelRow}>
-          <Text style={styles.label}>Store Pickup Fee</Text>
+          <Text style={styles.label}>{t('cart.pickupFee')}</Text>
           <View style={styles.freeBadge}>
-            <Text style={styles.freeText}>FREE</Text>
+            <Text style={styles.freeText}>{t('cart.free')}</Text>
           </View>
         </View>
         <Text style={[styles.value, styles.freeValue]}>₹0</Text>
@@ -38,7 +38,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart }) => {
 
       <View style={styles.row}>
         <Text style={styles.totalLabel}>
-          {hasStorePriced ? 'Est. Grand Total' : 'Grand Total'}
+          {hasStorePriced ? t('cart.estGrandTotal') : t('cart.grandTotal')}
         </Text>
         <Text style={styles.totalValue}>
           ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
@@ -49,7 +49,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart }) => {
         <View style={styles.weighedNoticeBox}>
           <Text style={styles.weighedNoticeIcon}>⚖️</Text>
           <Text style={styles.weighedNoticeText}>
-            *Includes produce weighed at store. Final total will be calculated after weighing at pickup counter.
+            {t('cart.weighedNotice')}
           </Text>
         </View>
       )}
@@ -57,7 +57,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart }) => {
       <View style={styles.pickupNotice}>
         <Text style={styles.pickupNoticeIcon}>⚡</Text>
         <Text style={styles.pickupNoticeText}>
-          Click & Collect: Skip billing queues. Order will be packed and waiting for you.
+          {t('cart.pickupNotice')}
         </Text>
       </View>
     </View>

@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { CartItem } from '../../types/cart';
 import { theme } from '../../utils/theme';
 import { QuantityControl } from './QuantityControl';
+import { useLocalization } from '../../hooks/useLocalization';
 
 interface CartItemProps {
   item: CartItem;
@@ -17,6 +18,7 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
   onDecrease,
   onRemove,
 }) => {
+  const { t } = useLocalization();
   const isStorePriced =
     item.price <= 0 || (item as any).pricing_type === 'store_priced';
   return (
@@ -38,7 +40,7 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
         {item.unit ? <Text style={styles.unit}>{item.unit}</Text> : null}
         {isStorePriced ? (
           <View style={styles.storePricedTag}>
-            <Text style={styles.storePricedTagText}>Price decided at shop</Text>
+            <Text style={styles.storePricedTagText}>{t('catalog.priceDecidedAtShop')}</Text>
           </View>
         ) : (
           <Text style={styles.price}>₹{item.price} each</Text>
@@ -56,7 +58,7 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
         </TouchableOpacity>
 
         <Text style={[styles.totalPrice, isStorePriced && styles.totalPriceTbd]}>
-          {isStorePriced ? 'TBD' : `₹${item.item_total}`}
+          {isStorePriced ? t('catalog.tbd') : `₹${item.item_total}`}
         </Text>
 
         <QuantityControl

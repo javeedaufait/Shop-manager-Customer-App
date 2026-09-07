@@ -80,11 +80,11 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
             </Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>{hasStorePriced ? 'Est. Total' : t('orders.total')}</Text>
+            <Text style={styles.label}>{hasStorePriced ? t('orderConfirmation.estTotal') : t('orders.total')}</Text>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.priceValue}>₹{order.total}{hasStorePriced ? '*' : ''}</Text>
               {hasStorePriced && (
-                <Text style={styles.weighedProduceBadge}>Excludes weighed produce</Text>
+                <Text style={styles.weighedProduceBadge}>{t('orderConfirmation.excludesWeighedProduce')}</Text>
               )}
             </View>
           </View>
@@ -92,7 +92,7 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
             <View style={styles.weighedNoticeBox}>
               <Text style={styles.weighedNoticeIcon}>⚖️</Text>
               <Text style={styles.weighedNoticeText}>
-                *This order contains produce weighed at the counter. The merchant will weigh items and calculate your final total upon pickup.
+                {t('orderConfirmation.weighedNotice')}
               </Text>
             </View>
           )}

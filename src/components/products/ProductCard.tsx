@@ -9,6 +9,7 @@ import {
 import { Product } from '../../types/catalog';
 import { theme } from '../../utils/theme';
 import { useCart } from '../../hooks/useCart';
+import { useLocalization } from '../../hooks/useLocalization';
 import { QuantityControl } from '../cart/QuantityControl';
 
 interface ProductCardProps {
@@ -25,6 +26,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onPress,
 }) => {
   const { getItemQuantity, addToCart, updateQuantity, getItem } = useCart();
+  const { t } = useLocalization();
   const quantity = getItemQuantity(product.id);
 
   const isAvailable =
@@ -117,13 +119,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.name}
         </Text>
 
+        {/* Weighed Produce Badge */}
+        {isStorePriced && (
+          <View style={styles.storePricedBadge}>
+            <Text style={styles.storePricedBadgeText}>⚖️ {t('catalog.weighedAtShop')}</Text>
+          </View>
+        )}
+
         {/* Pricing Section & Stepper */}
         <View style={styles.priceRow}>
           <View style={styles.priceColumn}>
             {isStorePriced ? (
-              <View style={styles.storePricedBadge}>
-                <Text style={styles.storePricedBadgeText}>At Shop (Weighed)</Text>
-              </View>
+              <Text style={styles.storePricedPlaceholder}>{t('catalog.tbd')}</Text>
             ) : (
               <>
                 <View style={styles.priceWithSymbol}>
@@ -298,12 +305,18 @@ const styles = StyleSheet.create({
   },
   storePricedBadge: {
     backgroundColor: '#F3E8FF',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E9D5FF',
     alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  storePricedPlaceholder: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7E22CE',
   },
   storePricedBadgeText: {
     fontSize: 11,

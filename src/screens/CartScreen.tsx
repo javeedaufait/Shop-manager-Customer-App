@@ -42,6 +42,9 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const isEmpty = !cart.items || cart.items.length === 0;
+  const hasStorePriced = cart.items.some(
+    (it) => it.price <= 0 || (it as any).pricing_type === 'store_priced'
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -56,7 +59,7 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Your Cart</Text>
+          <Text style={styles.headerTitle}>{t('cart.title')}</Text>
           {!isEmpty && (
             <Text style={styles.headerSubtitle}>
               {cart.total_quantity} {cart.total_quantity === 1 ? 'item' : 'items'}
@@ -70,7 +73,7 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
             onPress={handleClearCart}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.clearBtnText}>Clear</Text>
+            <Text style={styles.clearBtnText}>{t('cart.clear')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 44 }} />
@@ -83,16 +86,16 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.emptyIconCircle}>
             <Text style={styles.emptyIcon}>🛍️</Text>
           </View>
-          <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
+          <Text style={styles.emptyTitle}>{t('cart.emptyTitle')}</Text>
           <Text style={styles.emptySubtitle}>
-            Looks like you haven't added any groceries yet. Explore neighborhood supermarkets near you.
+            {t('cart.emptySubtitle')}
           </Text>
           <TouchableOpacity
             style={styles.exploreBtn}
             activeOpacity={0.85}
             onPress={() => navigation.navigate('NearbyShops')}
           >
-            <Text style={styles.exploreBtnText}>Explore Nearby Stores</Text>
+            <Text style={styles.exploreBtnText}>{t('cart.exploreStores')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -109,7 +112,7 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.storeIcon}>🏪</Text>
               </View>
               <View style={styles.storeInfo}>
-                <Text style={styles.storeTag}>Ordering from</Text>
+                <Text style={styles.storeTag}>{t('cart.orderingFrom')}</Text>
                 <Text style={styles.storeName}>{cart.shop_name}</Text>
               </View>
             </View>
@@ -129,7 +132,7 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.trustNote}>
                 <Text style={styles.trustIcon}>🛡️</Text>
                 <Text style={styles.trustText}>
-                  NearMart Hyperlocal Guarantee: Direct from store shelves, zero middlemen.
+                  {t('cart.guarantee')}
                 </Text>
               </View>
             </View>
@@ -141,8 +144,8 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
       {!isEmpty && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
           <View style={styles.bottomInfo}>
-            <Text style={styles.bottomTotalLabel}>Total to Pay at Pickup</Text>
-            <Text style={styles.bottomTotalAmount}>₹{cart.subtotal}</Text>
+            <Text style={styles.bottomTotalLabel}>{hasStorePriced ? t('checkout.estTotalToPay') : t('cart.totalToPay')}</Text>
+            <Text style={styles.bottomTotalAmount}>₹{cart.subtotal}{hasStorePriced ? '*' : ''}</Text>
           </View>
 
           <TouchableOpacity
@@ -150,7 +153,7 @@ export const CartScreen: React.FC<Props> = ({ navigation }) => {
             activeOpacity={0.85}
             onPress={handleProceedToPickup}
           >
-            <Text style={styles.checkoutBtnText}>Proceed to Pickup ›</Text>
+            <Text style={styles.checkoutBtnText}>{t('cart.proceedToPickup')} ›</Text>
           </TouchableOpacity>
         </View>
       )}

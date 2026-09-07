@@ -196,25 +196,34 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
           </View>
 
-          {cart.items.map((item, idx) => (
-            <View key={item.item_id || String(idx)} style={styles.itemRow}>
-              <View style={styles.itemMain}>
-                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                {item.unit ? <Text style={styles.itemUnit}>{item.unit}</Text> : null}
+          {cart.items.map((item, idx) => {
+            const isStorePriced =
+              item.price <= 0 || (item as any).pricing_type === 'store_priced';
+            return (
+              <View key={item.item_id || String(idx)} style={styles.itemRow}>
+                <View style={styles.itemMain}>
+                  <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                  {item.unit ? <Text style={styles.itemUnit}>{item.unit}</Text> : null}
+                  {isStorePriced ? (
+                    <Text style={styles.itemWeighedNote}>⚖️ {t('catalog.weighedAtCounter')}</Text>
+                  ) : null}
+                </View>
+                <View style={styles.itemRight}>
+                  <Text style={styles.itemQty}>x{item.quantity}</Text>
+                  <Text style={[styles.itemTotal, isStorePriced && styles.itemTotalTbd]}>
+                    {isStorePriced ? t('catalog.tbd') : `₹${item.item_total}`}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemQty}>x{item.quantity}</Text>
-                <Text style={styles.itemTotal}>₹{item.item_total}</Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Price Breakdown */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('orders.summary')}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{hasStorePriced ? 'Fixed Items Subtotal' : t('checkout.subtotal')}</Text>
+            <Text style={styles.summaryLabel}>{hasStorePriced ? t('checkout.fixedItemsSubtotal') : t('checkout.subtotal')}</Text>
             <Text style={styles.summaryValue}>₹{cart.subtotal}</Text>
           </View>
           <View style={styles.summaryRow}>
@@ -226,7 +235,7 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <Text style={styles.totalLabel}>
-              {hasStorePriced ? 'Est. Total to Pay' : t('checkout.totalToPay')}
+              {hasStorePriced ? t('checkout.estTotalToPay') : t('checkout.totalToPay')}
             </Text>
             <Text style={styles.totalValue}>
               ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
@@ -236,7 +245,7 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.weighedNoticeBox}>
               <Text style={styles.weighedNoticeIcon}>⚖️</Text>
               <Text style={styles.weighedNoticeText}>
-                *Final total includes produce weighed at store pickup. Pay exact amount at counter.
+                {t('checkout.weighedNotice')}
               </Text>
             </View>
           )}
@@ -251,7 +260,7 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.footerPrice}>
           <Text style={styles.footerSubtotalLabel}>
-            {hasStorePriced ? 'Est. Total to Pay' : t('checkout.totalToPay')}
+            {hasStorePriced ? t('checkout.estTotalToPay') : t('checkout.totalToPay')}
           </Text>
           <Text style={styles.footerPriceValue}>
             ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
