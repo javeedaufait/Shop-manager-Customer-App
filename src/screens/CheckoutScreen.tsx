@@ -203,13 +203,21 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
               <View key={item.item_id || String(idx)} style={styles.itemRow}>
                 <View style={styles.itemMain}>
                   <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                  {item.unit ? <Text style={styles.itemUnit}>{item.unit}</Text> : null}
+                  <Text style={styles.itemUnit}>
+                    {item.unit
+                      ? (item.quantity > 1 ? `${item.quantity} x ${item.unit}` : item.unit)
+                      : (isStorePriced ? `${item.quantity} ${item.quantity === 1 ? t('catalog.pc') : t('catalog.pcs')}` : null)}
+                  </Text>
                   {isStorePriced ? (
                     <Text style={styles.itemWeighedNote}>⚖️ {t('catalog.weighedAtCounter')}</Text>
                   ) : null}
                 </View>
                 <View style={styles.itemRight}>
-                  <Text style={styles.itemQty}>x{item.quantity}</Text>
+                  <Text style={styles.itemQty}>
+                    {isStorePriced && !item.unit
+                      ? `${item.quantity} ${item.quantity === 1 ? t('catalog.pc') : t('catalog.pcs')}`
+                      : `x${item.quantity}`}
+                  </Text>
                   <Text style={[styles.itemTotal, isStorePriced && styles.itemTotalTbd]}>
                     {isStorePriced ? t('catalog.tbd') : `₹${item.item_total}`}
                   </Text>

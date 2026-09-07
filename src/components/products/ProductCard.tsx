@@ -51,6 +51,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const isStorePriced =
     (effectivePrice === null || effectivePrice === undefined || effectivePrice <= 0) ||
     (product as any).pricing_type === 'store_priced';
+  const displayUnit = product.unit || (isStorePriced ? `1 ${t('catalog.pc')}` : null);
 
   const handleIncrease = () => {
     addToCart(product, shopId, shopName, 1);
@@ -107,9 +108,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {product.brand}
             </Text>
           ) : null}
-          {product.unit ? (
+          {displayUnit ? (
             <View style={styles.unitBadge}>
-              <Text style={styles.unitText}>{product.unit}</Text>
+              <Text style={styles.unitText}>{displayUnit}</Text>
             </View>
           ) : null}
         </View>

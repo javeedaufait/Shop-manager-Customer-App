@@ -37,7 +37,11 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
         <Text style={styles.name} numberOfLines={2}>
           {item.name}
         </Text>
-        {item.unit ? <Text style={styles.unit}>{item.unit}</Text> : null}
+        <Text style={styles.unit}>
+          {item.unit
+            ? (item.quantity > 1 ? `${item.quantity} x ${item.unit}` : item.unit)
+            : (isStorePriced ? `${item.quantity} ${item.quantity === 1 ? t('catalog.pc') : t('catalog.pcs')}` : null)}
+        </Text>
         {isStorePriced ? (
           <View style={styles.storePricedTag}>
             <Text style={styles.storePricedTagText}>{t('catalog.priceDecidedAtShop')}</Text>

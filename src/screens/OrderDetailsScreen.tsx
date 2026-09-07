@@ -175,7 +175,7 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemSub}>
                   {item.pricing_type === 'store_priced' && item.pricing_status === 'pending'
-                    ? (item.unit ? `${item.unit} • Price decided at shop` : 'Price decided at shop')
+                    ? `${item.unit || (item.quantity === 1 ? t('catalog.pc') : t('catalog.pcs'))} • ${t('catalog.priceDecidedAtShop')}`
                     : `${item.unit ? `${item.unit} • ` : ''}₹${item.price} each`}
                 </Text>
               </View>
