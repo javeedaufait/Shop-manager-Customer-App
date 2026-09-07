@@ -19,6 +19,17 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
   const { t } = useLocalization();
   const { order } = route.params;
 
+  const hasStorePriced =
+    (order as any).is_total_final === false ||
+    order.pricing_status === 'pending_verification' ||
+    (order.items &&
+      order.items.some(
+        (it: any) =>
+          it.pricing_type === 'store_priced' ||
+          (it.price !== undefined && it.price <= 0) ||
+          (it.item_total !== undefined && it.item_total <= 0)
+      ));
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
@@ -69,9 +80,22 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
             </Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>{t('orders.total')}</Text>
-            <Text style={styles.priceValue}>₹{order.total}</Text>
+            <Text style={styles.label}>{hasStorePriced ? 'Est. Total' : t('orders.total')}</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.priceValue}>₹{order.total}{hasStorePriced ? '*' : ''}</Text>
+              {hasStorePriced && (
+                <Text style={styles.weighedProduceBadge}>Excludes weighed produce</Text>
+              )}
+            </View>
           </View>
+          {hasStorePriced && (
+            <View style={styles.weighedNoticeBox}>
+              <Text style={styles.weighedNoticeIcon}>⚖️</Text>
+              <Text style={styles.weighedNoticeText}>
+                *This order contains produce weighed at the counter. The merchant will weigh items and calculate your final total upon pickup.
+              </Text>
+            </View>
+          )}
           <View style={styles.etaBox}>
             <Text style={styles.etaIcon}>⏱️</Text>
             <Text style={styles.etaText}>{t('orderConfirmation.estimatedTime')}</Text>
@@ -260,6 +284,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: theme.colors.primary,
     fontWeight: '800',
+  },
+  weighedProduceBadge: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7E22CE',
+    marginTop: 2,
+  },
+  weighedNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF5FF',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+  },
+  weighedNoticeIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  weighedNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6B21A8',
+    lineHeight: 16,
+    fontWeight: '500',
   },
   divider: {
     height: 1,

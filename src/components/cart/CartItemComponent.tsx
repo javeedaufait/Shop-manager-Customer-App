@@ -17,6 +17,8 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
   onDecrease,
   onRemove,
 }) => {
+  const isStorePriced =
+    item.price <= 0 || (item as any).pricing_type === 'store_priced';
   return (
     <View style={styles.card}>
       {/* Thumbnail */}
@@ -34,7 +36,13 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
           {item.name}
         </Text>
         {item.unit ? <Text style={styles.unit}>{item.unit}</Text> : null}
-        <Text style={styles.price}>₹{item.price} each</Text>
+        {isStorePriced ? (
+          <View style={styles.storePricedTag}>
+            <Text style={styles.storePricedTagText}>Price decided at shop</Text>
+          </View>
+        ) : (
+          <Text style={styles.price}>₹{item.price} each</Text>
+        )}
       </View>
 
       {/* Stepper & Total Column */}
@@ -47,7 +55,9 @@ export const CartItemComponent: React.FC<CartItemProps> = ({
           <Text style={styles.deleteIcon}>🗑️</Text>
         </TouchableOpacity>
 
-        <Text style={styles.totalPrice}>₹{item.item_total}</Text>
+        <Text style={[styles.totalPrice, isStorePriced && styles.totalPriceTbd]}>
+          {isStorePriced ? 'TBD' : `₹${item.item_total}`}
+        </Text>
 
         <QuantityControl
           quantity={item.quantity}
@@ -109,6 +119,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textSecondary,
     fontWeight: '500',
+  },
+  storePricedTag: {
+    backgroundColor: '#F3E8FF',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 2,
+  },
+  storePricedTagText: {
+    fontSize: 11,
+    color: '#7E22CE',
+    fontWeight: '700',
+  },
+  totalPriceTbd: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#7E22CE',
   },
   actionsColumn: {
     alignItems: 'flex-end',

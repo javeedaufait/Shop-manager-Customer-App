@@ -34,6 +34,10 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
 
   const isEmpty = !cart.items || cart.items.length === 0;
 
+  const hasStorePriced = cart.items.some(
+    (it) => it.price <= 0 || (it as any).pricing_type === 'store_priced'
+  );
+
   const handlePlaceOrder = async () => {
     setErrorMessage(null);
 
@@ -210,7 +214,7 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('orders.summary')}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('checkout.subtotal')}</Text>
+            <Text style={styles.summaryLabel}>{hasStorePriced ? 'Fixed Items Subtotal' : t('checkout.subtotal')}</Text>
             <Text style={styles.summaryValue}>₹{cart.subtotal}</Text>
           </View>
           <View style={styles.summaryRow}>
@@ -221,9 +225,21 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>{t('checkout.totalToPay')}</Text>
-            <Text style={styles.totalValue}>₹{cart.subtotal}</Text>
+            <Text style={styles.totalLabel}>
+              {hasStorePriced ? 'Est. Total to Pay' : t('checkout.totalToPay')}
+            </Text>
+            <Text style={styles.totalValue}>
+              ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
+            </Text>
           </View>
+          {hasStorePriced && (
+            <View style={styles.weighedNoticeBox}>
+              <Text style={styles.weighedNoticeIcon}>⚖️</Text>
+              <Text style={styles.weighedNoticeText}>
+                *Final total includes produce weighed at store pickup. Pay exact amount at counter.
+              </Text>
+            </View>
+          )}
           <View style={styles.paymentNoticeBox}>
             <Text style={styles.paymentNoticeIcon}>ℹ️</Text>
             <Text style={styles.paymentNoticeText}>{t('checkout.payAtStore')}</Text>
@@ -234,8 +250,12 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
       {/* Footer / Place Order CTA */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.footerPrice}>
-          <Text style={styles.footerSubtotalLabel}>{t('checkout.totalToPay')}</Text>
-          <Text style={styles.footerPriceValue}>₹{cart.subtotal}</Text>
+          <Text style={styles.footerSubtotalLabel}>
+            {hasStorePriced ? 'Est. Total to Pay' : t('checkout.totalToPay')}
+          </Text>
+          <Text style={styles.footerPriceValue}>
+            ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
+          </Text>
         </View>
         <TouchableOpacity
           style={[styles.placeBtn, isSubmitting && styles.placeBtnDisabled]}
@@ -450,6 +470,37 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     minWidth: 55,
     textAlign: 'right',
+  },
+  itemWeighedNote: {
+    fontSize: 11,
+    color: '#7E22CE',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  itemTotalTbd: {
+    color: '#7E22CE',
+    fontWeight: '700',
+  },
+  weighedNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF5FF',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  weighedNoticeIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  weighedNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6B21A8',
+    lineHeight: 16,
+    fontWeight: '500',
   },
   summaryRow: {
     flexDirection: 'row',

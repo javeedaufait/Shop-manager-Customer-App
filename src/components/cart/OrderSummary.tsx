@@ -8,13 +8,18 @@ interface OrderSummaryProps {
 }
 
 export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart }) => {
+  const hasStorePriced = cart.items.some(
+    (it) => it.price <= 0 || (it as any).pricing_type === 'store_priced'
+  );
   return (
     <View style={styles.card}>
       <Text style={styles.title}>Bill Details</Text>
 
       <View style={styles.row}>
         <Text style={styles.label}>
-          Item Subtotal ({cart.total_quantity} {cart.total_quantity === 1 ? 'item' : 'items'})
+          {hasStorePriced
+            ? `Fixed Items Subtotal (${cart.total_quantity} items)`
+            : `Item Subtotal (${cart.total_quantity} ${cart.total_quantity === 1 ? 'item' : 'items'})`}
         </Text>
         <Text style={styles.value}>₹{cart.subtotal}</Text>
       </View>
@@ -32,9 +37,22 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart }) => {
       <View style={styles.divider} />
 
       <View style={styles.row}>
-        <Text style={styles.totalLabel}>Grand Total</Text>
-        <Text style={styles.totalValue}>₹{cart.subtotal}</Text>
+        <Text style={styles.totalLabel}>
+          {hasStorePriced ? 'Est. Grand Total' : 'Grand Total'}
+        </Text>
+        <Text style={styles.totalValue}>
+          ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
+        </Text>
       </View>
+
+      {hasStorePriced && (
+        <View style={styles.weighedNoticeBox}>
+          <Text style={styles.weighedNoticeIcon}>⚖️</Text>
+          <Text style={styles.weighedNoticeText}>
+            *Includes produce weighed at store. Final total will be calculated after weighing at pickup counter.
+          </Text>
+        </View>
+      )}
 
       <View style={styles.pickupNotice}>
         <Text style={styles.pickupNoticeIcon}>⚡</Text>
@@ -109,6 +127,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     color: theme.colors.primary,
+  },
+  weighedNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF5FF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    padding: 10,
+    marginTop: 8,
+    gap: 8,
+  },
+  weighedNoticeIcon: {
+    fontSize: 16,
+  },
+  weighedNoticeText: {
+    fontSize: 12,
+    color: '#6B21A8',
+    flex: 1,
+    lineHeight: 16,
+    fontWeight: '500',
   },
   pickupNotice: {
     flexDirection: 'row',

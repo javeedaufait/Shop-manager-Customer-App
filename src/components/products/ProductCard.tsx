@@ -46,6 +46,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   }
 
   const effectivePrice = hasDiscount ? product.sale_price : product.price;
+  const isStorePriced =
+    (effectivePrice === null || effectivePrice === undefined || effectivePrice <= 0) ||
+    (product as any).pricing_type === 'store_priced';
 
   const handleIncrease = () => {
     addToCart(product, shopId, shopName, 1);
@@ -117,12 +120,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Pricing Section & Stepper */}
         <View style={styles.priceRow}>
           <View style={styles.priceColumn}>
-            <View style={styles.priceWithSymbol}>
-              <Text style={styles.currency}>₹</Text>
-              <Text style={styles.effectivePrice}>{effectivePrice}</Text>
-            </View>
-            {hasDiscount && (
-              <Text style={styles.strikePrice}>₹{product.price}</Text>
+            {isStorePriced ? (
+              <View style={styles.storePricedBadge}>
+                <Text style={styles.storePricedBadgeText}>At Shop (Weighed)</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.priceWithSymbol}>
+                  <Text style={styles.currency}>₹</Text>
+                  <Text style={styles.effectivePrice}>{effectivePrice}</Text>
+                </View>
+                {hasDiscount && (
+                  <Text style={styles.strikePrice}>₹{product.price}</Text>
+                )}
+              </>
             )}
           </View>
 
@@ -284,6 +295,20 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     textDecorationLine: 'line-through',
     marginTop: 1,
+  },
+  storePricedBadge: {
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    alignSelf: 'flex-start',
+  },
+  storePricedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7E22CE',
   },
   disabledTag: {
     backgroundColor: '#F3F4F6',

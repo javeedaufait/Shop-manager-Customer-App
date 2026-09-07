@@ -19,6 +19,10 @@ export const FloatingCartBar: React.FC<FloatingCartBarProps> = ({
     return null;
   }
 
+  const hasStorePriced = cart.items.some(
+    (it) => it.price <= 0 || (it as any).pricing_type === 'store_priced'
+  );
+
   return (
     <View style={styles.wrapper}>
       <TouchableOpacity
@@ -28,9 +32,9 @@ export const FloatingCartBar: React.FC<FloatingCartBarProps> = ({
       >
         <View style={styles.leftInfo}>
           <Text style={styles.itemCountText}>
-            {cart.total_quantity} {cart.total_quantity === 1 ? 'item' : 'items'}
+            {cart.total_quantity} {cart.total_quantity === 1 ? 'item' : 'items'}{hasStorePriced ? ' • Est.' : ''}
           </Text>
-          <Text style={styles.subtotalText}>₹{cart.subtotal}</Text>
+          <Text style={styles.subtotalText}>₹{cart.subtotal}{hasStorePriced ? '*' : ''}</Text>
         </View>
 
         <View style={styles.rightAction}>
