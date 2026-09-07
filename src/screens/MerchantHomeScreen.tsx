@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet,  ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MerchantStackParamList } from '../navigation/types';
 import { theme } from '../utils/theme';
 import { Header } from '../components/common/Header';
 import { Card } from '../components/common/Card';
@@ -8,7 +10,9 @@ import { RoleBadge } from '../components/common/RoleBadge';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalization } from '../hooks/useLocalization';
 
-export const MerchantHomeScreen: React.FC = () => {
+type Props = NativeStackScreenProps<MerchantStackParamList, 'MerchantHome'>;
+
+export const MerchantHomeScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { t } = useLocalization();
 
@@ -22,6 +26,26 @@ export const MerchantHomeScreen: React.FC = () => {
           <Text style={styles.greeting}>{t('home.merchantGreeting')}</Text>
           <Text style={styles.subtitle}>Welcome, {user?.name}</Text>
         </View>
+
+        {/* Store Orders Quick Action Card */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.ordersActionCard}
+          onPress={() => navigation.navigate('MerchantOrders')}
+        >
+          <View style={styles.ordersActionLeft}>
+            <View style={styles.ordersIconCircle}>
+              <Text style={{ fontSize: 24 }}>📦</Text>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.ordersActionTitle}>{t('merchantOrders.title')}</Text>
+              <Text style={styles.ordersActionSubtitle}>{t('merchantOrders.subtitle')}</Text>
+            </View>
+          </View>
+          <View style={styles.ordersActionArrow}>
+            <Text style={styles.arrowText}>›</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Linked Shop Card */}
         {shop ? (
@@ -96,7 +120,6 @@ export const MerchantHomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  
   container: {
     padding: theme.spacing.xl,
     gap: theme.spacing.lg,
@@ -116,6 +139,57 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  ordersActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E3A8A',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  ordersActionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  ordersIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ordersActionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  ordersActionSubtitle: {
+    fontSize: 12,
+    color: '#BFDBFE',
+  },
+  ordersActionArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  arrowText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    lineHeight: 22,
   },
   shopCard: {
     gap: theme.spacing.md,

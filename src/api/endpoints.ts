@@ -27,4 +27,10 @@ export const ENDPOINTS = {
     detail: (orderId: number | string) => `/orders/${orderId}`,
     status: (orderId: number | string) => `/orders/${orderId}/status`,
   },
+  merchant: {
+    orders: '/merchant/orders',
+    orderDetail: (orderId: number | string) => `/merchant/orders/${orderId}`,
+    updateStatus: (orderId: number | string) => `/merchant/orders/${orderId}/status`,
+    weigh: (orderId: number | string) => `/merchant/orders/${orderId}/weigh`,
+  },
 };

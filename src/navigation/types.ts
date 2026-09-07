@@ -29,4 +29,6 @@ export type CustomerStackParamList = {
 
 export type MerchantStackParamList = {
   MerchantHome: undefined;
+  MerchantOrders: undefined;
+  MerchantOrderDetails: { orderId: number | string; order?: Order };
 };

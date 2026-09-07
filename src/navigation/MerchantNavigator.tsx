@@ -2,6 +2,8 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MerchantStackParamList } from './types';
 import { MerchantHomeScreen } from '../screens/MerchantHomeScreen';
+import { MerchantOrdersScreen } from '../screens/MerchantOrdersScreen';
+import { MerchantOrderDetailsScreen } from '../screens/MerchantOrderDetailsScreen';
 
 const Stack = createNativeStackNavigator<MerchantStackParamList>();
 
@@ -13,6 +15,8 @@ export const MerchantNavigator: React.FC = () => {
       }}
     >
       <Stack.Screen name="MerchantHome" component={MerchantHomeScreen} />
+      <Stack.Screen name="MerchantOrders" component={MerchantOrdersScreen} />
+      <Stack.Screen name="MerchantOrderDetails" component={MerchantOrderDetailsScreen} />
     </Stack.Navigator>
   );
 };
