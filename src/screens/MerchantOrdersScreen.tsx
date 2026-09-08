@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { MerchantStackParamList } from '../navigation/types';
 import { useLocalization } from '../hooks/useLocalization';
 import { useAuth } from '../hooks/useAuth';
@@ -54,6 +55,13 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
       setIsRefreshing(false);
     }
   }, [searchQuery, activeTab, pricingFilter, paymentFilter]);
+
+  // Refresh when screen gains focus (e.g. returning from Order Details)
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [fetchOrders])
+  );
 
   useEffect(() => {
     setIsLoading(true);

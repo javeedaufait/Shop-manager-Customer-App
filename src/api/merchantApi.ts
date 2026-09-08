@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 import { ENDPOINTS } from './endpoints';
-import { Order, OrderStatus } from '../types/orders';
+import { Order, OrderStatus, WeighedItemInput } from '../types/orders';
 
 export interface GetMerchantOrdersParams {
   search?: string;
@@ -72,12 +72,17 @@ export const merchantApi = {
   },
 
   /**
-   * Update fulfillment status for an order (e.g. accepted, preparing, ready_for_pickup).
+   * Update fulfillment status for an order (e.g. accepted, preparing, ready_for_pickup, completed, rejected).
+   * Optional reason parameter for rejections.
    */
-  async updateOrderStatus(orderId: number | string, status: OrderStatus): Promise<Order> {
+  async updateOrderStatus(
+    orderId: number | string,
+    status: OrderStatus,
+    reason?: string
+  ): Promise<Order> {
     const resp = await apiClient.post<{ order: Order }>(
       ENDPOINTS.merchant.updateStatus(orderId),
-      { status }
+      { status, reason }
     );
     return resp.order;
   },
@@ -87,7 +92,7 @@ export const merchantApi = {
    */
   async weighOrderItems(
     orderId: number | string,
-    items: { product_id: number; actual_weight?: number; rate?: number; actual_total?: number }[]
+    items: WeighedItemInput[]
   ): Promise<Order> {
     const resp = await apiClient.post<{ order: Order }>(
       ENDPOINTS.merchant.weigh(orderId),

@@ -23,7 +23,23 @@ export interface PaymentEligibility {
   notice?: string | null;
 }
 
+export type MerchantFulfillmentAction =
+  | 'accept'
+  | 'reject'
+  | 'start_preparing'
+  | 'weigh_produce'
+  | 'mark_ready_for_pickup'
+  | 'confirm_pickup';
+
+export interface WeighedItemInput {
+  order_item_id?: number;
+  product_id: number;
+  actual_quantity: number;
+  unit_price: number;
+}
+
 export interface OrderItem {
+  order_item_id?: number;
   product_id: number;
   name: string;
   item_type?: 'master_linked' | 'standalone';
@@ -59,6 +75,9 @@ export interface Order {
   estimated_total?: number | null;
   final_total?: number | null;
   has_pending_prices?: boolean;
+  requires_weighing?: boolean;
+  available_actions?: MerchantFulfillmentAction[];
+  rejection_reason?: string | null;
   payment_eligibility?: PaymentEligibility;
   items: OrderItem[];
   item_count: number;

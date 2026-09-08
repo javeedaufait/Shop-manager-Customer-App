@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,28 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MerchantStackParamList } from '../navigation/types';
 import { useLocalization } from '../hooks/useLocalization';
 import { merchantApi } from '../api/merchantApi';
-import { Order, OrderStatus } from '../types/orders';
+import { Order, OrderStatus, WeighedItemInput, MerchantFulfillmentAction } from '../types/orders';
 import { theme } from '../utils/theme';
 
 type Props = NativeStackScreenProps<MerchantStackParamList, 'MerchantOrderDetails'>;
+
+interface WeighedInputState {
+  [key: string]: {
+    weight: string;
+    price: string;
+  };
+}
 
 export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -25,6 +37,29 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
 
   const [order, setOrder] = useState<Order | null>(initialOrder || null);
   const [isLoading, setIsLoading] = useState<boolean>(!initialOrder);
+  const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
+
+  // Modals visibility
+  const [isWeighModalOpen, setIsWeighModalOpen] = useState<boolean>(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState<boolean>(false);
+  const [isPickupModalOpen, setIsPickupModalOpen] = useState<boolean>(false);
+
+  // Weighing form state
+  const [weighedInputs, setWeighedInputs] = useState<WeighedInputState>({});
+  const [isSavingWeigh, setIsSavingWeigh] = useState<boolean>(false);
+
+  // Reject form state
+  const [selectedRejectPreset, setSelectedRejectPreset] = useState<string>('out_of_stock');
+  const [customRejectReason, setCustomRejectReason] = useState<string>('');
+
+  const refreshOrder = async () => {
+    try {
+      const data = await merchantApi.getOrderDetail(orderId);
+      setOrder(data);
+    } catch (err) {
+      console.warn('Failed to refresh merchant order details:', err);
+    }
+  };
 
   useEffect(() => {
     if (!initialOrder) {
@@ -40,6 +75,158 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
     if (phone) {
       Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, '')}`);
     }
+  };
+
+  // Status transitions
+  const handleStatusTransition = async (nextStatus: OrderStatus, reason?: string) => {
+    if (!order) return;
+    setIsActionLoading(true);
+    try {
+      const updated = await merchantApi.updateOrderStatus(order.id, nextStatus, reason);
+      setOrder(updated);
+
+      if (nextStatus === 'accepted') {
+        Alert.alert('✓', t('merchantOrders.actions.acceptSuccess'));
+      } else if (nextStatus === 'preparing') {
+        Alert.alert('📦', t('merchantOrders.actions.startPreparingSuccess'));
+      } else if (nextStatus === 'ready_for_pickup') {
+        Alert.alert('🛍️', t('merchantOrders.actions.markReadySuccess'));
+      } else if (nextStatus === 'completed') {
+        Alert.alert('🎉', t('merchantOrders.actions.confirmPickupSuccess'));
+      } else if (nextStatus === 'rejected') {
+        Alert.alert('✓', t('merchantOrders.actions.rejectSuccess'));
+      }
+    } catch (err: any) {
+      console.warn('Status transition error:', err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        t('merchantOrders.actions.actionFailed');
+      Alert.alert('Notice', msg);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Produce weighing
+  const openWeighModal = () => {
+    if (!order) return;
+    const initialInputs: WeighedInputState = {};
+    order.items.forEach((item, index) => {
+      if (item.pricing_type === 'store_priced') {
+        const key = String(item.order_item_id || item.product_id || index);
+        const currentQty =
+          item.actual_quantity !== null && item.actual_quantity !== undefined
+            ? String(item.actual_quantity)
+            : String(item.requested_quantity || item.quantity || 1);
+        const currentPrice =
+          item.price !== undefined && item.price !== null
+            ? String(item.price)
+            : '';
+        initialInputs[key] = {
+          weight: currentQty,
+          price: currentPrice,
+        };
+      }
+    });
+    setWeighedInputs(initialInputs);
+    setIsWeighModalOpen(true);
+  };
+
+  const handleWeightInputChange = (key: string, field: 'weight' | 'price', value: string) => {
+    setWeighedInputs((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: value,
+      },
+    }));
+  };
+
+  const storePricedItems = useMemo(() => {
+    if (!order) return [];
+    return order.items.filter((i) => i.pricing_type === 'store_priced');
+  }, [order]);
+
+  // Live calculation for weighing modal
+  const { liveProduceSubtotal, liveGrandTotal } = useMemo(() => {
+    let produceSub = 0;
+    storePricedItems.forEach((item, index) => {
+      const key = String(item.order_item_id || item.product_id || index);
+      const input = weighedInputs[key];
+      const w = parseFloat(input?.weight || '0') || 0;
+      const p = parseFloat(input?.price || '0') || 0;
+      produceSub += w * p;
+    });
+
+    const fixedSub = Number(order?.fixed_items_subtotal || 0);
+    return {
+      liveProduceSubtotal: round2(produceSub),
+      liveGrandTotal: round2(fixedSub + produceSub),
+    };
+  }, [storePricedItems, weighedInputs, order]);
+
+  const handleSaveWeighing = async () => {
+    if (!order) return;
+
+    // Validate inputs
+    const payload: WeighedItemInput[] = [];
+    for (let i = 0; i < storePricedItems.length; i++) {
+      const item = storePricedItems[i];
+      const key = String(item.order_item_id || item.product_id || i);
+      const input = weighedInputs[key];
+      const w = parseFloat(input?.weight || '0');
+      const p = parseFloat(input?.price || '0');
+
+      if (!w || w <= 0 || isNaN(w) || isNaN(p) || p < 0) {
+        Alert.alert('Notice', t('merchantOrders.weighModal.invalidInputs'));
+        return;
+      }
+
+      payload.push({
+        order_item_id: item.order_item_id,
+        product_id: item.product_id,
+        actual_quantity: w,
+        unit_price: p,
+      });
+    }
+
+    setIsSavingWeigh(true);
+    try {
+      const updated = await merchantApi.weighOrderItems(order.id, payload);
+      setOrder(updated);
+      setIsWeighModalOpen(false);
+      Alert.alert('✓', t('merchantOrders.weighModal.success'));
+    } catch (err: any) {
+      console.warn('Failed to weigh items:', err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        t('merchantOrders.actions.actionFailed');
+      Alert.alert('Notice', msg);
+    } finally {
+      setIsSavingWeigh(false);
+    }
+  };
+
+  // Rejection confirmation
+  const handleConfirmReject = () => {
+    if (!order) return;
+    const presetLabel =
+      t(`merchantOrders.rejectModal.reasons.${selectedRejectPreset}` as any) ||
+      selectedRejectPreset;
+    const finalReason = customRejectReason.trim()
+      ? `${presetLabel}: ${customRejectReason.trim()}`
+      : presetLabel;
+
+    setIsRejectModalOpen(false);
+    handleStatusTransition('rejected', finalReason);
+  };
+
+  // Pickup confirmation
+  const handleConfirmPickup = () => {
+    setIsPickupModalOpen(false);
+    handleStatusTransition('completed');
   };
 
   const getStatusBadge = (status: OrderStatus) => {
@@ -77,6 +264,36 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
     }
     return { label: t('merchantOrders.badges.unpaid'), bg: '#FEF2F2', text: '#DC2626' };
   };
+
+  // Determine available actions
+  const effectiveActions: MerchantFulfillmentAction[] = useMemo(() => {
+    if (!order) return [];
+    if (Array.isArray(order.available_actions) && order.available_actions.length > 0) {
+      return order.available_actions;
+    }
+
+    // Fallback derivation if server hasn't populated available_actions
+    const st = order.fulfillment_status || order.status;
+    const hasUnweighed =
+      order.requires_weighing ??
+      (order.items &&
+        order.items.some(
+          (i) => i.pricing_type === 'store_priced' && i.pricing_status !== 'finalized'
+        ));
+
+    switch (st) {
+      case 'pending':
+        return ['accept', 'reject'];
+      case 'accepted':
+        return ['start_preparing'];
+      case 'preparing':
+        return hasUnweighed ? ['weigh_produce'] : ['mark_ready_for_pickup'];
+      case 'ready_for_pickup':
+        return ['confirm_pickup'];
+      default:
+        return [];
+    }
+  }, [order]);
 
   if (isLoading || !order) {
     return (
@@ -117,10 +334,30 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{order.order_number}</Text>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={refreshOrder}
+          disabled={isActionLoading}
+        >
+          <Text style={styles.refreshIcon}>🔄</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Rejection Notice Banner if rejected */}
+        {order.status === 'rejected' && (
+          <View style={styles.rejectedBanner}>
+            <Text style={styles.rejectedBannerTitle}>
+              🚫 {t('orders.status.rejected')}
+            </Text>
+            {!!order.rejection_reason && (
+              <Text style={styles.rejectedBannerReason}>
+                {t('merchantOrders.rejectionReason')}: {order.rejection_reason}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Pickup Code Verification Card */}
         <View style={styles.pickupCard}>
           <Text style={styles.pickupHeaderLabel}>{t('merchantOrders.pickupCode')}</Text>
@@ -184,24 +421,36 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
 
         {/* Line Items Snapshot List */}
         <View style={styles.card}>
-          <Text style={styles.cardSectionTitle}>
-            {t('merchantOrders.orderItems')} ({order.items.length})
-          </Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardSectionTitle}>
+              {t('merchantOrders.orderItems')} ({order.items.length})
+            </Text>
+            {order.status === 'preparing' && storePricedItems.length > 0 && (
+              <TouchableOpacity style={styles.editWeighLink} onPress={openWeighModal}>
+                <Text style={styles.editWeighLinkText}>
+                  ⚖️ {order.pricing_status === 'finalized' ? 'Edit Weights' : t('merchantOrders.actions.weighProduce')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={styles.itemsList}>
             {order.items.map((item, idx) => {
               const isProduce = item.pricing_type === 'store_priced';
+              const isFinalized = item.pricing_status === 'finalized';
+
               return (
-                <View key={idx} style={styles.itemRow}>
+                <View key={item.order_item_id || idx} style={styles.itemRow}>
                   <View style={styles.itemInfoCol}>
                     <Text style={styles.itemName}>{item.name}</Text>
                     <View style={styles.itemMetaRow}>
                       <Text style={styles.itemQtyText}>
-                        Qty: {item.requested_quantity || item.quantity} {item.unit || ''}
+                        Requested: {item.requested_quantity || item.quantity} {item.unit || ''}
                       </Text>
                       {isProduce ? (
-                        <View style={styles.produceBadge}>
-                          <Text style={styles.produceBadgeText}>
-                            ⚖️ {t('merchantOrders.badges.store_priced')}
+                        <View style={[styles.produceBadge, isFinalized && styles.produceBadgeFinalized]}>
+                          <Text style={[styles.produceBadgeText, isFinalized && styles.produceBadgeTextFinalized]}>
+                            ⚖️ {isFinalized ? `Actual: ${item.actual_quantity} ${item.unit || ''}` : t('merchantOrders.badges.store_priced')}
                           </Text>
                         </View>
                       ) : (
@@ -209,13 +458,20 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
                       )}
                     </View>
                   </View>
-                  <Text style={styles.itemLineTotal}>
-                    {isProduce ? (
-                      <Text style={styles.producePendingText}>At Shop</Text>
+                  <View style={styles.itemPriceCol}>
+                    {isProduce && !isFinalized ? (
+                      <Text style={styles.producePendingText}>Pending Weigh</Text>
                     ) : (
-                      `₹${Number(item.item_total || 0).toFixed(2)}`
+                      <>
+                        <Text style={styles.itemLineTotal}>
+                          ₹{Number(item.item_total || 0).toFixed(2)}
+                        </Text>
+                        {isProduce && isFinalized && (
+                          <Text style={styles.itemRateSub}>@ ₹{Number(item.price || 0).toFixed(2)}</Text>
+                        )}
+                      </>
                     )}
-                  </Text>
+                  </View>
                 </View>
               );
             })}
@@ -254,17 +510,367 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
           </View>
         </View>
 
-        {/* Action Phase Notice */}
-        <View style={styles.phaseNoticeBox}>
-          <Text style={styles.phaseNoticeTitle}>ℹ️ APP-8.1 Foundation Scope</Text>
-          <Text style={styles.phaseNoticeDesc}>
-            Order inspection is active. Order fulfillment actions (Accept, Reject, Produce Weighing & Finalization) will be enabled in APP-8.2.
-          </Text>
+        {/* Interactive Fulfillment Actions Controller (APP-8.2) */}
+        <View style={styles.actionCard}>
+          <Text style={styles.actionCardTitle}>Fulfillment Actions</Text>
+
+          {isActionLoading ? (
+            <View style={styles.actionLoadingRow}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={styles.actionLoadingText}>{t('merchantOrders.actions.updating')}</Text>
+            </View>
+          ) : (
+            <View style={styles.actionButtonsContainer}>
+              {/* 1. Pending: Accept / Reject */}
+              {effectiveActions.includes('accept') && (
+                <View style={styles.splitButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.rejectBtn]}
+                    onPress={() => setIsRejectModalOpen(true)}
+                  >
+                    <Text style={styles.rejectBtnText}>
+                      ✕ {t('merchantOrders.actions.reject')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.acceptBtn]}
+                    onPress={() => handleStatusTransition('accepted')}
+                  >
+                    <Text style={styles.acceptBtnText}>
+                      ✓ {t('merchantOrders.actions.accept')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* 2. Accepted: Start Preparing */}
+              {effectiveActions.includes('start_preparing') && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.preparingBtn]}
+                  onPress={() => handleStatusTransition('preparing')}
+                >
+                  <Text style={styles.preparingBtnText}>
+                    📦 {t('merchantOrders.actions.startPreparing')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* 3. Preparing & Unweighed: Weigh & Finalize */}
+              {effectiveActions.includes('weigh_produce') && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.weighBtn]}
+                  onPress={openWeighModal}
+                >
+                  <Text style={styles.weighBtnText}>
+                    ⚖️ {t('merchantOrders.actions.weighProduce')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* 4. Preparing & Finalized: Mark Ready for Pickup */}
+              {effectiveActions.includes('mark_ready_for_pickup') && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.readyBtn]}
+                  onPress={() => handleStatusTransition('ready_for_pickup')}
+                >
+                  <Text style={styles.readyBtnText}>
+                    🛍️ {t('merchantOrders.actions.markReady')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* 5. Ready for Pickup: Confirm Pickup */}
+              {effectiveActions.includes('confirm_pickup') && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.confirmPickupBtn]}
+                  onPress={() => setIsPickupModalOpen(true)}
+                >
+                  <Text style={styles.confirmPickupBtnText}>
+                    🎉 {t('merchantOrders.actions.confirmPickup')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Terminal state label */}
+              {effectiveActions.length === 0 && (
+                <View style={styles.terminalNotice}>
+                  <Text style={styles.terminalNoticeText}>
+                    {order.status === 'completed'
+                      ? '✓ Order fulfillment completed successfully.'
+                      : order.status === 'rejected'
+                      ? '✕ Order was rejected.'
+                      : 'Order has reached a terminal state.'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* ======================================================= */}
+      {/* MODAL 1: Produce Weighing & Finalization Modal          */}
+      {/* ======================================================= */}
+      <Modal
+        visible={isWeighModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsWeighModalOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{t('merchantOrders.weighModal.title')}</Text>
+                <Text style={styles.modalSubtitle}>{t('merchantOrders.weighModal.subtitle')}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setIsWeighModalOpen(false)}
+              >
+                <Text style={styles.modalCloseIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {storePricedItems.map((item, idx) => {
+                const key = String(item.order_item_id || item.product_id || idx);
+                const input = weighedInputs[key] || { weight: '', price: '' };
+                const curW = parseFloat(input.weight || '0') || 0;
+                const curP = parseFloat(input.price || '0') || 0;
+                const lineTot = round2(curW * curP);
+
+                return (
+                  <View key={key} style={styles.weighItemCard}>
+                    <View style={styles.weighItemHeader}>
+                      <Text style={styles.weighItemName}>{item.name}</Text>
+                      <View style={styles.reqQtyBadge}>
+                        <Text style={styles.reqQtyBadgeText}>
+                          {t('merchantOrders.weighModal.requested')}: {item.requested_quantity || item.quantity} {item.unit || ''}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.weighInputsRow}>
+                      <View style={styles.inputCol}>
+                        <Text style={styles.inputLabel}>
+                          {t('merchantOrders.weighModal.actualWeight')} ({item.unit || 'unit'})
+                        </Text>
+                        <TextInput
+                          style={styles.textInput}
+                          keyboardType="decimal-pad"
+                          placeholder="0.00"
+                          value={input.weight}
+                          onChangeText={(v) => handleWeightInputChange(key, 'weight', v)}
+                        />
+                      </View>
+
+                      <View style={styles.inputCol}>
+                        <Text style={styles.inputLabel}>
+                          {t('merchantOrders.weighModal.ratePerUnit')}
+                        </Text>
+                        <TextInput
+                          style={styles.textInput}
+                          keyboardType="decimal-pad"
+                          placeholder="0.00"
+                          value={input.price}
+                          onChangeText={(v) => handleWeightInputChange(key, 'price', v)}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.lineTotalRow}>
+                      <Text style={styles.lineTotalLabel}>
+                        {t('merchantOrders.weighModal.lineTotal')}:
+                      </Text>
+                      <Text style={styles.lineTotalValue}>₹{lineTot.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {/* Totals Preview in Modal */}
+              <View style={styles.modalTotalsCard}>
+                <View style={styles.modalTotalsRow}>
+                  <Text style={styles.modalTotalsLabel}>
+                    {t('merchantOrders.weighModal.fixedSubtotal')}:
+                  </Text>
+                  <Text style={styles.modalTotalsVal}>
+                    ₹{Number(order.fixed_items_subtotal || 0).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.modalTotalsRow}>
+                  <Text style={styles.modalTotalsLabel}>
+                    {t('merchantOrders.weighModal.produceSubtotal')}:
+                  </Text>
+                  <Text style={styles.modalTotalsVal}>₹{liveProduceSubtotal.toFixed(2)}</Text>
+                </View>
+                <View style={[styles.modalTotalsRow, styles.modalGrandTotalRow]}>
+                  <Text style={styles.modalGrandTotalLabel}>
+                    {t('merchantOrders.weighModal.grandTotal')}:
+                  </Text>
+                  <Text style={styles.modalGrandTotalVal}>₹{liveGrandTotal.toFixed(2)}</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setIsWeighModalOpen(false)}
+                disabled={isSavingWeigh}
+              >
+                <Text style={styles.modalCancelBtnText}>{t('merchantOrders.weighModal.cancel')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalSubmitBtn, isSavingWeigh && styles.modalSubmitBtnDisabled]}
+                onPress={handleSaveWeighing}
+                disabled={isSavingWeigh}
+              >
+                {isSavingWeigh ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalSubmitBtnText}>
+                    {t('merchantOrders.weighModal.saveAndFinalize')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ======================================================= */}
+      {/* MODAL 2: Order Rejection Modal                         */}
+      {/* ======================================================= */}
+      <Modal
+        visible={isRejectModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRejectModalOpen(false)}
+      >
+        <View style={styles.centerModalOverlay}>
+          <View style={styles.centerModalCard}>
+            <Text style={styles.rejectModalTitle}>
+              🚫 {t('merchantOrders.rejectModal.title')}
+            </Text>
+            <Text style={styles.rejectModalSubtitle}>
+              {t('merchantOrders.rejectModal.subtitle')}
+            </Text>
+
+            <View style={styles.reasonsList}>
+              {['out_of_stock', 'store_closing', 'damaged', 'too_busy', 'other'].map((preset) => {
+                const isSelected = selectedRejectPreset === preset;
+                const label = t(`merchantOrders.rejectModal.reasons.${preset}` as any) || preset;
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[styles.reasonChip, isSelected && styles.reasonChipSelected]}
+                    onPress={() => setSelectedRejectPreset(preset)}
+                  >
+                    <Text style={[styles.reasonChipText, isSelected && styles.reasonChipTextSelected]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TextInput
+              style={styles.rejectReasonInput}
+              placeholder={t('merchantOrders.rejectModal.customPlaceholder')}
+              value={customRejectReason}
+              onChangeText={setCustomRejectReason}
+              multiline
+              numberOfLines={2}
+            />
+
+            <View style={styles.centerModalActionsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setIsRejectModalOpen(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>
+                  {t('merchantOrders.rejectModal.cancel')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.rejectBtn, { flex: 1, paddingVertical: 12 }]}
+                onPress={handleConfirmReject}
+              >
+                <Text style={styles.rejectBtnText}>
+                  {t('merchantOrders.rejectModal.confirmReject')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ======================================================= */}
+      {/* MODAL 3: Counter Pickup Code Confirmation Modal        */}
+      {/* ======================================================= */}
+      <Modal
+        visible={isPickupModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPickupModalOpen(false)}
+      >
+        <View style={styles.centerModalOverlay}>
+          <View style={styles.centerModalCard}>
+            <Text style={styles.pickupModalTitle}>
+              🛍️ {t('merchantOrders.confirmPickupModal.title')}
+            </Text>
+            <Text style={styles.pickupModalSubtitle}>
+              {t('merchantOrders.confirmPickupModal.subtitle')}
+            </Text>
+
+            <View style={styles.pickupModalCodeBox}>
+              <Text style={styles.pickupModalCodeLabel}>
+                {t('merchantOrders.confirmPickupModal.codeLabel')}
+              </Text>
+              <Text style={styles.pickupModalCodeValue}>{order.pickup_code}</Text>
+            </View>
+
+            <Text style={styles.pickupModalInstruction}>
+              {t('merchantOrders.confirmPickupModal.instruction')}
+            </Text>
+
+            <View style={styles.centerModalActionsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setIsPickupModalOpen(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>
+                  {t('merchantOrders.confirmPickupModal.cancel')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.confirmPickupBtn, { flex: 1, paddingVertical: 12 }]}
+                onPress={handleConfirmPickup}
+              >
+                <Text style={styles.confirmPickupBtnText}>
+                  {t('merchantOrders.confirmPickupModal.confirmButton')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
+
+function round2(val: number): number {
+  return Math.round((val + Number.EPSILON) * 100) / 100;
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -294,6 +900,17 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     lineHeight: 28,
   },
+  refreshBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  refreshIcon: {
+    fontSize: 16,
+  },
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
@@ -302,11 +919,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 14,
+    paddingBottom: 40,
   },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rejectedBanner: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+  },
+  rejectedBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  rejectedBannerReason: {
+    fontSize: 13,
+    color: '#991B1B',
   },
   pickupCard: {
     backgroundColor: '#1E3A8A',
@@ -372,6 +1007,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  editWeighLink: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  editWeighLinkText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#C2410C',
+  },
   callButton: {
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
@@ -421,7 +1069,7 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
@@ -429,6 +1077,10 @@ const styles = StyleSheet.create({
   itemInfoCol: {
     flex: 1,
     gap: 4,
+  },
+  itemPriceCol: {
+    alignItems: 'flex-end',
+    marginLeft: 12,
   },
   itemName: {
     fontSize: 14,
@@ -438,6 +1090,7 @@ const styles = StyleSheet.create({
   itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   itemQtyText: {
@@ -454,16 +1107,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  produceBadgeFinalized: {
+    backgroundColor: '#ECFDF5',
+  },
   produceBadgeText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#EA580C',
   },
+  produceBadgeTextFinalized: {
+    color: '#059669',
+  },
   itemLineTotal: {
     fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
-    marginLeft: 12,
+  },
+  itemRateSub: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
   producePendingText: {
     fontSize: 12,
@@ -516,21 +1178,408 @@ const styles = StyleSheet.create({
   asteriskText: {
     color: '#EA580C',
   },
-  phaseNoticeBox: {
+  actionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+    marginTop: 4,
+  },
+  actionCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  actionLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  actionLoadingText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  actionButtonsContainer: {
+    gap: 10,
+  },
+  splitButtonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBtn: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptBtn: {
+    flex: 2,
+    backgroundColor: '#16A34A',
+  },
+  acceptBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  rejectBtn: {
+    flex: 1,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  rejectBtnText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  preparingBtn: {
+    backgroundColor: '#4F46E5',
+  },
+  preparingBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  weighBtn: {
+    backgroundColor: '#EA580C',
+  },
+  weighBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  readyBtn: {
+    backgroundColor: '#059669',
+  },
+  readyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  confirmPickupBtn: {
+    backgroundColor: '#1E3A8A',
+  },
+  confirmPickupBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  terminalNotice: {
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  terminalNoticeText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    paddingBottom: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseIcon: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '700',
+  },
+  modalScroll: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  weighItemCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+    gap: 10,
+  },
+  weighItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  weighItemName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    flex: 1,
+  },
+  reqQtyBadge: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  reqQtyBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  weighInputsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inputCol: {
+    flex: 1,
+    gap: 4,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  lineTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  lineTotalLabel: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  lineTotalValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalTotalsCard: {
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     padding: 14,
-    gap: 4,
-    marginBottom: 20,
+    gap: 6,
+    marginBottom: 16,
   },
-  phaseNoticeTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
+  modalTotalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  phaseNoticeDesc: {
+  modalTotalsLabel: {
     fontSize: 12,
     color: '#64748B',
+  },
+  modalTotalsVal: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  modalGrandTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#CBD5E1',
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  modalGrandTotalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalGrandTotalVal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E3A8A',
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingTop: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    borderRadius: 12,
+    backgroundColor: '#EA580C',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitBtnDisabled: {
+    opacity: 0.6,
+  },
+  modalSubmitBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Center Modal (Rejection / Pickup Confirmation)
+  centerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  centerModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 380,
+    gap: 14,
+  },
+  rejectModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  rejectModalSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  reasonsList: {
+    gap: 8,
+  },
+  reasonChip: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  reasonChipSelected: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+  },
+  reasonChipText: {
+    fontSize: 13,
+    color: '#334155',
+  },
+  reasonChipTextSelected: {
+    color: '#DC2626',
+    fontWeight: '700',
+  },
+  rejectReasonInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    backgroundColor: '#F8FAFC',
+    textAlignVertical: 'top',
+  },
+  centerModalActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  pickupModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E3A8A',
+    textAlign: 'center',
+  },
+  pickupModalSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  pickupModalCodeBox: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 4,
+  },
+  pickupModalCodeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E40AF',
+    textTransform: 'uppercase',
+  },
+  pickupModalCodeValue: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#1E3A8A',
+    fontFamily: 'monospace',
+    letterSpacing: 2,
+  },
+  pickupModalInstruction: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
     lineHeight: 18,
   },
 });
