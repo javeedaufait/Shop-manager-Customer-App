@@ -273,7 +273,7 @@ export const ml = {
         finalized: "അന്തിമ വില കണക്കാക്കി",
       },
       paymentStatus: {
-        unpaid: "പണം നൽകിയിട്ടില്ല (കൗണ്ടറിൽ നൽകുക)",
+        unpaid: "പണം നൽകിയിട്ടില്ല (കൗണ്ടറിൽ)",
         paid: "പണം നൽകി",
         payment_pending: "തീരുമാനമായിട്ടില്ല",
         failed: "പരാജയപ്പെട്ടു",

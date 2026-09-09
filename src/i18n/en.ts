@@ -273,7 +273,7 @@ export const en = {
         finalized: "Pricing Finalized",
       },
       paymentStatus: {
-        unpaid: "Unpaid (Pay at Store Counter)",
+        unpaid: "Unpaid (Pay at Counter)",
         paid: "Paid",
         payment_pending: "Payment Pending",
         failed: "Payment Failed",

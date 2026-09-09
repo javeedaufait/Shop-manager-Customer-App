@@ -106,7 +106,7 @@ export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigati
               <View style={styles.navIconBox}>
                 <Text style={styles.navIcon}>📋</Text>
               </View>
-              <View>
+              <View style={styles.navTextContainer}>
                 <Text style={styles.navTitle}>{t('orders.title')}</Text>
                 <Text style={styles.navSubtitle}>{t('orderConfirmation.viewHistory')}</Text>
               </View>
@@ -125,7 +125,7 @@ export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigati
               <View style={styles.navIconBox}>
                 <Text style={styles.navIcon}>🏬</Text>
               </View>
-              <View>
+              <View style={styles.navTextContainer}>
                 <Text style={styles.navTitle}>{t('cart.exploreStores')}</Text>
                 <Text style={styles.navSubtitle}>{t('welcome.customerDesc')}</Text>
               </View>
@@ -187,6 +187,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    marginRight: 8,
   },
   avatarCircle: {
     width: 44,
@@ -226,6 +228,8 @@ const styles = StyleSheet.create({
     ...theme.typography.small,
     color: theme.colors.text,
     fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'right',
   },
   navCard: {
     padding: 6,
@@ -238,9 +242,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   navLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginRight: 8,
+  },
+  navTextContainer: {
+    flex: 1,
   },
   navIconBox: {
     width: 38,
@@ -262,11 +271,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 2,
+    lineHeight: 16,
   },
   navArrow: {
     fontSize: 22,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    marginLeft: 4,
   },
   divider: {
     height: 1,

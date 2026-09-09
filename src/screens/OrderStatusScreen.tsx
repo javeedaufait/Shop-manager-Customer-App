@@ -623,25 +623,26 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 12,
+    gap: 8,
   },
   summaryCardTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text,
   },
   chipsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
+    alignItems: 'center',
   },
   chipBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
+    flexShrink: 1,
   },
   chipText: {
     fontSize: 11,
