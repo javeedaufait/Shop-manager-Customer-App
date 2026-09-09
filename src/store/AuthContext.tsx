@@ -66,7 +66,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
+    apiClient.setOnUnauthorized(handleClearSession);
     initialize();
+
+    return () => {
+      apiClient.setOnUnauthorized(null);
+    };
   }, []);
 
   const continueAsGuest = () => {

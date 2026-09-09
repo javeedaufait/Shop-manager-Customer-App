@@ -57,43 +57,11 @@ export const ordersApi = {
         await this.cacheOrder(resp.order);
         return resp.order;
       }
+      throw new Error('Unexpected order response format');
     } catch (err) {
-      console.warn('Backend order placement failed or offline, falling back to local order:', err);
+      console.warn('Backend order placement failed:', err);
+      throw err;
     }
-
-    // Offline / fallback order generation for testing resiliency
-    const id = Date.now();
-    const subtotal = payload.items.reduce((acc, item) => acc + item.quantity * 50, 0);
-    const mockOrder: Order = {
-      id,
-      order_number: `NM-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      pickup_code: `PU-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${id % 1000}`,
-      shop_id: payload.shop_id,
-      shop_name: 'NearMart Partner Store',
-      shop_address: 'Main Bazaar Road, Near Bus Station',
-      shop_phone: '+91 98470 12345',
-      customer_id: null,
-      customer_name: payload.customer_name,
-      customer_phone: payload.customer_phone,
-      customer_note: payload.customer_note || null,
-      status: 'pending',
-      items: payload.items.map((it) => ({
-        product_id: it.product_id,
-        name: `Ordered Item #${it.product_id}`,
-        quantity: it.quantity,
-        price: 50,
-        item_total: it.quantity * 50,
-      })),
-      item_count: payload.items.length,
-      total_quantity: payload.items.reduce((acc, it) => acc + it.quantity, 0),
-      subtotal,
-      total: subtotal,
-      pickup_type: 'pickup',
-      created_at: new Date().toISOString(),
-    };
-
-    await this.cacheOrder(mockOrder);
-    return mockOrder;
   },
 
   /**

@@ -39,7 +39,11 @@ export const Header: React.FC<HeaderProps> = ({
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
         ) : null}
-        {title ? <Text style={styles.title}>{title}</Text> : null}
+        {title ? (
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+            {title}
+          </Text>
+        ) : null}
       </View>
 
       {showLanguageToggle && (
@@ -72,6 +76,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
     minHeight: 40,
+    flex: 1,
+    marginRight: 12,
   },
   backButton: {
     width: 40,
@@ -95,6 +101,7 @@ const styles = StyleSheet.create({
   title: {
     ...theme.typography.subtitle,
     color: theme.colors.text,
+    flexShrink: 1,
   },
   langBadge: {
     backgroundColor: theme.colors.primaryLight,

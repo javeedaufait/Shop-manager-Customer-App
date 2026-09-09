@@ -41,8 +41,19 @@ export const parseApiError = (error: any): AppError => {
     }
   }
 
-  // Network or connection errors
-  if (error?.message === 'Network Error' || error?.code === 'ECONNABORTED' || error?.message?.includes('network')) {
+  // Network or connection errors (handles React Native 'Network request failed', fetch aborts, timeouts)
+  const errMsg = String(error?.message || '').toLowerCase();
+  const errCode = String(error?.code || '').toUpperCase();
+  if (
+    errMsg === 'network error' ||
+    errMsg.includes('network request failed') ||
+    errMsg.includes('failed to fetch') ||
+    errMsg.includes('network') ||
+    errMsg.includes('request timeout') ||
+    errCode === 'ECONNABORTED' ||
+    errCode === 'ENOTFOUND' ||
+    error?.name === 'AbortError'
+  ) {
     return new AppError(t('errors.network'), 'NETWORK_ERROR');
   }
 

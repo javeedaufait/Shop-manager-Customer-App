@@ -33,6 +33,7 @@ class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
   private basicAuthHeader: string | null = null;
+  private onUnauthorizedCallback: (() => void) | null = null;
 
   constructor() {
     let rawUrl = ENV.apiUrl;
@@ -51,6 +52,10 @@ class ApiClient {
 
   public setToken(token: string | null) {
     this.authToken = token;
+  }
+
+  public setOnUnauthorized(callback: (() => void) | null) {
+    this.onUnauthorizedCallback = callback;
   }
 
   public async getStoredToken(): Promise<string | null> {
@@ -119,6 +124,12 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       const json = await response.json().catch(() => null);
+
+      if (response.status === 401) {
+        if (this.onUnauthorizedCallback) {
+          this.onUnauthorizedCallback();
+        }
+      }
 
       if (!response.ok || (json && json.success === false)) {
         throw parseApiError({

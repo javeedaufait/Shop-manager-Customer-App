@@ -12,6 +12,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -37,6 +38,7 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
 
   const [order, setOrder] = useState<Order | null>(initialOrder || null);
   const [isLoading, setIsLoading] = useState<boolean>(!initialOrder);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
 
   // Modals visibility
@@ -52,24 +54,27 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
   const [selectedRejectPreset, setSelectedRejectPreset] = useState<string>('out_of_stock');
   const [customRejectReason, setCustomRejectReason] = useState<string>('');
 
-  const refreshOrder = async () => {
+  const refreshOrder = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const data = await merchantApi.getOrderDetail(orderId);
-      setOrder(data);
+      if (data) setOrder(data);
     } catch (err) {
       console.warn('Failed to refresh merchant order details:', err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    refreshOrder(false);
+  };
+
   useEffect(() => {
-    if (!initialOrder) {
-      merchantApi
-        .getOrderDetail(orderId)
-        .then((data) => setOrder(data))
-        .catch((err) => console.warn('Failed to load merchant order details:', err))
-        .finally(() => setIsLoading(false));
-    }
-  }, [orderId, initialOrder]);
+    refreshOrder(!initialOrder);
+  }, [orderId]);
 
   const handleCallCustomer = (phone?: string) => {
     if (phone) {
@@ -336,14 +341,24 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
         <Text style={styles.headerTitle}>{order.order_number}</Text>
         <TouchableOpacity
           style={styles.refreshBtn}
-          onPress={refreshOrder}
+          onPress={() => refreshOrder(true)}
           disabled={isActionLoading}
         >
           <Text style={styles.refreshIcon}>🔄</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+          />
+        }
+      >
         {/* Rejection Notice Banner if rejected */}
         {order.status === 'rejected' && (
           <View style={styles.rejectedBanner}>
