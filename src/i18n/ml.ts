@@ -390,5 +390,13 @@ export const ml = {
         cancel: "റദ്ദാക്കുക",
       },
     },
-
+    notifications: {
+      orderAcceptedTitle: "ഓർഡർ സ്വീകരിച്ചു",
+      orderPreparingTitle: "ഓർഡർ തയ്യാറാക്കുന്നു",
+      orderReadyTitle: "പിക്കപ്പിനായി തയ്യാർ!",
+      orderCompletedTitle: "ഓർഡർ പൂർത്തിയായി",
+      orderRejectedTitle: "ഓർഡർ അപ്‌ഡേറ്റ്",
+      produceFinalizedTitle: "വില കണക്കാക്കി",
+      merchantNewOrderTitle: "പുതിയ ഓർഡർ ലഭിച്ചു",
+    },
   };

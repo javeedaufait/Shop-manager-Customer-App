@@ -390,5 +390,13 @@ export const en = {
         cancel: "Cancel",
       },
     },
-
+    notifications: {
+      orderAcceptedTitle: "Order Accepted",
+      orderPreparingTitle: "Order Packing",
+      orderReadyTitle: "Ready for Pickup!",
+      orderCompletedTitle: "Order Completed",
+      orderRejectedTitle: "Order Update",
+      produceFinalizedTitle: "Produce Price Finalized",
+      merchantNewOrderTitle: "New Order Received",
+    },
   };

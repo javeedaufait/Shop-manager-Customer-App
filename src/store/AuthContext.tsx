@@ -3,6 +3,7 @@ import { UserProfile, UserRole, LoginPayload, RegisterPayload } from '../types/a
 import { authApi } from '../api/authApi';
 import { apiClient } from '../api/client';
 import { storageService } from '../services/storageService';
+import { notificationService } from '../services/notificationService';
 import { ENV, SupportedLanguage } from '../config/env';
 import { setI18nLanguage } from '../i18n';
 
@@ -53,6 +54,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (meData?.user) {
             setUser(meData.user);
             await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(meData.user));
+            // Register push notifications for restored session
+            notificationService.registerTokenWithBackend().catch((e) => console.warn('Push registration error:', e));
           } else {
             // Invalid session
             await handleClearSession();
@@ -101,6 +104,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
     await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
+
+    // Register push token for logged-in user
+    notificationService.registerTokenWithBackend().catch((e) => console.warn('Push registration error:', e));
   };
 
   const register = async (payload: RegisterPayload) => {
@@ -111,10 +117,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
     await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
+
+    // Register push token for newly registered user
+    notificationService.registerTokenWithBackend().catch((e) => console.warn('Push registration error:', e));
   };
 
   const logout = async () => {
     try {
+      await notificationService.deregisterTokenOnLogout();
       await authApi.logout();
     } catch (e) {
       console.warn('Backend logout warning:', e);

@@ -6,12 +6,13 @@ import { AuthNavigator } from './AuthNavigator';
 import { CustomerNavigator } from './CustomerNavigator';
 import { MerchantNavigator } from './MerchantNavigator';
 import { theme } from '../utils/theme';
+import { navigationRef } from './navigationRef';
 
 export const RootNavigator: React.FC = () => {
   const { isAuthenticated, isGuest, role, isLoading } = useAuth();
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {isLoading ? (
         <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
