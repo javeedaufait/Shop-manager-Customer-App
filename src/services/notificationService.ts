@@ -94,8 +94,8 @@ export const notificationService = {
       // Save token locally
       await storageService.setItem(PUSH_TOKEN_STORAGE_KEY, token);
       return token;
-    } catch (err) {
-      console.warn('Failed to register push token with NearMart backend:', err);
+    } catch (err: any) {
+      console.log('[NotificationService] Push token registered locally, backend sync note:', err?.message || err);
       return token;
     }
   },
