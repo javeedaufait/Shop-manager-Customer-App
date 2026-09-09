@@ -141,7 +141,7 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
 
           <TouchableOpacity
             style={styles.textBtn}
-            onPress={() => navigation.navigate('CustomerHome')}
+            onPress={() => navigation.navigate('NearbyShops')}
             activeOpacity={0.7}
           >
             <Text style={styles.textBtnText}>← {t('orderConfirmation.continueShopping')}</Text>

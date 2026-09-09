@@ -124,7 +124,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           <Text style={styles.changeBtnText}>{t('location.changeLocation')}</Text>
         </TouchableOpacity>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <TouchableOpacity
             style={styles.profileBtn}
             activeOpacity={0.8}
@@ -143,6 +143,13 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
                 <Text style={styles.headerCartBadgeText}>{cart.total_quantity}</Text>
               </View>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('CustomerHome')}
+          >
+            <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -334,9 +341,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   profileBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -345,7 +352,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.sm,
   },
   profileIcon: {
-    fontSize: 20,
+    fontSize: 18,
   },
   searchBar: {
     flexDirection: 'row',

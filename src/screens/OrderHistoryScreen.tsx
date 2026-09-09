@@ -176,7 +176,13 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('orders.title')}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={styles.headerProfileBtn}
+          onPress={() => navigation.navigate('CustomerHome')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.headerProfileIcon}>👤</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Filter Tabs */}
@@ -233,7 +239,7 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.emptySubtitle}>{t('orders.emptySubtitle')}</Text>
               <TouchableOpacity
                 style={styles.startShopBtn}
-                onPress={() => navigation.navigate('CustomerHome')}
+                onPress={() => navigation.navigate('NearbyShops')}
               >
                 <Text style={styles.startShopBtnText}>{t('orders.startShopping')}</Text>
               </TouchableOpacity>
@@ -276,6 +282,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: theme.colors.text,
+  },
+  headerProfileBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerProfileIcon: {
+    fontSize: 18,
   },
   tabsContainer: {
     flexDirection: 'row',

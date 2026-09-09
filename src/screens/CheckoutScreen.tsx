@@ -99,7 +99,7 @@ export const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t('cart.emptyTitle')}</Text>
-          <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('CustomerHome')}>
+          <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('NearbyShops')}>
             <Text style={styles.emptyBtnText}>{t('cart.exploreStores')}</Text>
           </TouchableOpacity>
         </View>
