@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,15 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../navigation/types';
 import { useLocalization } from '../hooks/useLocalization';
 import { ordersApi } from '../api/ordersApi';
-import { Order, OrderStatus } from '../types/orders';
+import { Order, OrderStatus, PricingStatus, PaymentStatus } from '../types/orders';
 import { theme } from '../utils/theme';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'OrderDetails'>;
@@ -25,16 +27,30 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [order, setOrder] = useState<Order | null>(initialOrder || null);
   const [isLoading, setIsLoading] = useState<boolean>(!initialOrder);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (!initialOrder) {
-      ordersApi
-        .getOrderById(orderId)
-        .then((data) => setOrder(data))
-        .catch((err) => console.warn('Failed to load order details:', err))
-        .finally(() => setIsLoading(false));
+  const fetchOrder = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) setIsRefreshing(true);
+    try {
+      const data = await ordersApi.getOrderById(orderId);
+      setOrder(data);
+    } catch (err) {
+      console.warn('Failed to load order details:', err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [orderId, initialOrder]);
+  }, [orderId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrder();
+    }, [fetchOrder])
+  );
+
+  const onRefresh = () => {
+    fetchOrder(true);
+  };
 
   const handleCallStore = (phone?: string) => {
     if (phone) {
@@ -42,7 +58,7 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const getStatusBadge = (status: OrderStatus) => {
+  const getFulfillmentBadge = (status: OrderStatus) => {
     switch (status) {
       case 'ready_for_pickup':
         return { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' };
@@ -61,6 +77,74 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  const getPricingBadge = (pricingStatus?: PricingStatus) => {
+    switch (pricingStatus) {
+      case 'pending_verification':
+        return {
+          bg: '#FEF3C7',
+          text: '#B45309',
+          border: '#FDE68A',
+          label: t('orders.pricingStatus.pending_verification'),
+        };
+      case 'finalized':
+        return {
+          bg: '#ECFDF5',
+          text: '#047857',
+          border: '#A7F3D0',
+          label: t('orders.pricingStatus.finalized'),
+        };
+      case 'fixed':
+      default:
+        return {
+          bg: '#EFF6FF',
+          text: '#1D4ED8',
+          border: '#BFDBFE',
+          label: t('orders.pricingStatus.fixed'),
+        };
+    }
+  };
+
+  const getPaymentBadge = (paymentStatus?: PaymentStatus) => {
+    switch (paymentStatus) {
+      case 'paid':
+        return {
+          bg: '#ECFDF5',
+          text: '#047857',
+          border: '#A7F3D0',
+          label: t('orders.paymentStatus.paid'),
+        };
+      case 'payment_pending':
+        return {
+          bg: '#EEF2FF',
+          text: '#4338CA',
+          border: '#C7D2FE',
+          label: t('orders.paymentStatus.payment_pending'),
+        };
+      case 'failed':
+        return {
+          bg: '#FEF2F2',
+          text: '#B91C1C',
+          border: '#FECACA',
+          label: t('orders.paymentStatus.failed'),
+        };
+      case 'refunded':
+        return {
+          bg: '#F1F5F9',
+          text: '#475569',
+          border: '#CBD5E1',
+          label: t('orders.paymentStatus.refunded'),
+        };
+      case 'unpaid':
+      default:
+        return {
+          bg: '#FFFBEB',
+          text: '#B45309',
+          border: '#FDE68A',
+          label: t('orders.paymentStatus.unpaid'),
+        };
+    }
+  };
+
   if (isLoading || !order) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -68,7 +152,7 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Text style={styles.backIcon}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Order Details</Text>
+          <Text style={styles.headerTitle}>{t('orders.orderDetailsTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centerContainer}>
@@ -78,7 +162,10 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   }
 
-  const badge = getStatusBadge(order.status);
+  const fulfillmentBadge = getFulfillmentBadge(order.status);
+  const pricingBadge = getPricingBadge(order.pricing_status);
+  const paymentBadge = getPaymentBadge(order.payment_status);
+
   const dateFormatted = new Date(order.created_at).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -102,20 +189,53 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
+        }
       >
         {/* Status Card */}
         <View style={styles.card}>
           <View style={styles.statusRow}>
-            <View>
+            <View style={{ flex: 1, marginRight: 8 }}>
               <Text style={styles.orderNumberTitle}>{order.order_number}</Text>
               <Text style={styles.orderDate}>{dateFormatted}</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-              <Text style={[styles.statusBadgeText, { color: badge.text }]}>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: fulfillmentBadge.bg, borderColor: fulfillmentBadge.border },
+              ]}
+            >
+              <Text style={[styles.statusBadgeText, { color: fulfillmentBadge.text }]}>
                 {t(`orders.status.${order.status}` as any) || order.status}
               </Text>
             </View>
           </View>
+
+          {/* Pricing & Payment Status Chips */}
+          <View style={styles.chipsRow}>
+            <View
+              style={[
+                styles.chipBadge,
+                { backgroundColor: pricingBadge.bg, borderColor: pricingBadge.border },
+              ]}
+            >
+              <Text style={[styles.chipText, { color: pricingBadge.text }]}>
+                ⚖️ {pricingBadge.label}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.chipBadge,
+                { backgroundColor: paymentBadge.bg, borderColor: paymentBadge.border },
+              ]}
+            >
+              <Text style={[styles.chipText, { color: paymentBadge.text }]}>
+                💳 {paymentBadge.label}
+              </Text>
+            </View>
+          </View>
+
           <Text style={styles.statusDesc}>
             {t(`orders.statusDesc.${order.status}` as any)}
           </Text>
@@ -169,33 +289,45 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             {t('checkout.itemsSummary')} ({order.total_quantity} {t('orders.items')})
           </Text>
 
-          {order.items.map((item, idx) => (
-            <View key={item.product_id ? String(item.product_id) : String(idx)} style={styles.itemRow}>
-              <View style={styles.itemMain}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemSub}>
-                  {item.pricing_type === 'store_priced' && item.pricing_status === 'pending'
-                    ? `${item.unit || (item.quantity === 1 ? t('catalog.pc') : t('catalog.pcs'))} • ${t('catalog.priceDecidedAtShop')}`
-                    : `${item.unit ? `${item.unit} • ` : ''}₹${item.price} each`}
-                </Text>
+          {order.items.map((item, idx) => {
+            const isStorePriced = item.pricing_type === 'store_priced';
+            const isFinalized = item.pricing_status === 'finalized';
+
+            return (
+              <View key={item.order_item_id ? String(item.order_item_id) : (item.product_id ? String(item.product_id) : String(idx))} style={styles.itemRow}>
+                <View style={styles.itemMain}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemSub}>
+                    {isStorePriced && !isFinalized
+                      ? `${item.unit || (item.quantity === 1 ? t('catalog.pc') : t('catalog.pcs'))} • ${t('catalog.priceDecidedAtShop')}`
+                      : `${item.unit ? `${item.unit} • ` : ''}₹${item.price} each`}
+                  </Text>
+                  {isStorePriced && isFinalized ? (
+                    <Text style={styles.weighedTag}>
+                      ⚖️ {item.actual_quantity ?? item.quantity} {item.unit || ''} (Weighed)
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={styles.itemRight}>
+                  <Text style={styles.itemQty}>
+                    x{item.actual_quantity ? item.actual_quantity : item.quantity}
+                  </Text>
+                  <Text style={[styles.itemTotal, isStorePriced && !isFinalized && styles.itemTotalTbd]}>
+                    {isStorePriced && !isFinalized ? 'TBD' : `₹${item.item_total}`}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemQty}>x{item.actual_quantity ? item.actual_quantity : item.quantity}</Text>
-                <Text style={styles.itemTotal}>
-                  {item.pricing_type === 'store_priced' && item.pricing_status === 'pending'
-                    ? 'TBD'
-                    : `₹${item.item_total}`}
-                </Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Order Summary & Pricing */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('orders.summary')}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('checkout.subtotal')}</Text>
+            <Text style={styles.summaryLabel}>
+              {order.has_pending_prices ? t('checkout.fixedItemsSubtotal') : t('checkout.subtotal')}
+            </Text>
             <Text style={styles.summaryValue}>₹{order.subtotal}</Text>
           </View>
           <View style={styles.summaryRow}>
@@ -206,20 +338,40 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>{t('orders.total')}</Text>
+            <Text style={styles.totalLabel}>
+              {order.has_pending_prices
+                ? t('orders.tracking.estPayable')
+                : t('orders.tracking.finalPayable')}
+            </Text>
             <Text style={styles.totalValue}>
               {order.has_pending_prices
-                ? (order.estimated_total ? `Est. ~₹${order.estimated_total}` : 'Pending store weighing')
+                ? (order.estimated_total ? `~₹${order.estimated_total}*` : t('orders.pricingStatus.pending_verification'))
                 : `₹${order.final_total ?? order.total}`}
             </Text>
           </View>
+
+          {/* Pricing Notices */}
           {order.has_pending_prices ? (
-            <View style={{ backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginTop: 8 }}>
-              <Text style={{ fontSize: 12, color: '#92400E', fontWeight: '500' }}>
-                ⚖️ Contains items weighed at the store. Final payable amount confirmed upon packing.
+            <View style={styles.weighedNoticeBox}>
+              <Text style={styles.weighedNoticeText}>
+                {t('orders.tracking.estTotalNotice')}
+              </Text>
+            </View>
+          ) : order.pricing_status === 'finalized' ? (
+            <View style={styles.finalizedNoticeBox}>
+              <Text style={styles.finalizedNoticeText}>
+                {t('orders.tracking.finalTotalNotice')}
               </Text>
             </View>
           ) : null}
+
+          {/* Payment Notice / Eligibility */}
+          <View style={styles.paymentNoticeBox}>
+            <Text style={styles.paymentNoticeIcon}>ℹ️</Text>
+            <Text style={styles.paymentNoticeText}>
+              {order.payment_eligibility?.notice || t('orders.tracking.payAtStoreNotice')}
+            </Text>
+          </View>
         </View>
 
         {/* Customer & Note */}
@@ -324,6 +476,22 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  chipBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 11,
     fontWeight: '700',
   },
   statusDesc: {
@@ -451,6 +619,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
+  weighedTag: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '700',
+    marginTop: 2,
+  },
   itemRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -467,6 +641,10 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     minWidth: 55,
     textAlign: 'right',
+  },
+  itemTotalTbd: {
+    color: '#7E22CE',
+    fontWeight: '700',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -497,6 +675,53 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: theme.colors.primary,
+  },
+  weighedNoticeBox: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  weighedNoticeText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  finalizedNoticeBox: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  finalizedNoticeText: {
+    fontSize: 12,
+    color: '#065F46',
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  paymentNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  paymentNoticeIcon: {
+    fontSize: 15,
+    marginRight: 8,
+  },
+  paymentNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1E40AF',
+    lineHeight: 16,
+    fontWeight: '500',
   },
   noteBox: {
     marginTop: 10,

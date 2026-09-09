@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../navigation/types';
 import { useLocalization } from '../hooks/useLocalization';
@@ -43,9 +44,11 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, [user?.phone]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [fetchOrders])
+  );
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -105,15 +108,30 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.orderNumber}>{item.order_number}</Text>
             <Text style={styles.orderDate}>{dateFormatted}</Text>
           </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: badge.bg, borderColor: badge.border },
-            ]}
-          >
-            <Text style={[styles.statusBadgeText, { color: badge.text }]}>
-              {t(`orders.status.${item.status}` as any) || item.status}
-            </Text>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: badge.bg, borderColor: badge.border },
+              ]}
+            >
+              <Text style={[styles.statusBadgeText, { color: badge.text }]}>
+                {t(`orders.status.${item.status}` as any) || item.status}
+              </Text>
+            </View>
+            {item.pricing_status === 'pending_verification' ? (
+              <View style={styles.pricingChip}>
+                <Text style={styles.pricingChipText}>
+                  ⚖️ {t('orders.pricingStatus.pending_verification')}
+                </Text>
+              </View>
+            ) : item.pricing_status === 'finalized' ? (
+              <View style={[styles.pricingChip, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                <Text style={[styles.pricingChipText, { color: '#047857' }]}>
+                  ✓ {t('orders.pricingStatus.finalized')}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -127,8 +145,14 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.cardFooter}>
           <View>
-            <Text style={styles.totalLabel}>{t('orders.total')}</Text>
-            <Text style={styles.totalValue}>₹{item.total}</Text>
+            <Text style={styles.totalLabel}>
+              {item.has_pending_prices ? t('orders.tracking.estPayable') : t('orders.total')}
+            </Text>
+            <Text style={styles.totalValue}>
+              {item.has_pending_prices
+                ? (item.estimated_total ? `~₹${item.estimated_total}*` : t('orders.pricingStatus.pending_verification'))
+                : `₹${item.final_total ?? item.total}`}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.trackBtn}
@@ -326,6 +350,19 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  pricingChip: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  pricingChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B45309',
   },
   cardBody: {
     marginVertical: 4,
