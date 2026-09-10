@@ -14,17 +14,22 @@ interface CustomerHomeScreenProps {
 }
 
 export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, isGuest, exitGuestMode, logout } = useAuth();
   const { t } = useLocalization();
 
   const handleLogout = () => {
+    if (isGuest) {
+      exitGuestMode();
+      return;
+    }
+
     Alert.alert(
-      t('common.logout'),
+      t('common.logout') || 'Log Out',
       t('auth.logoutConfirm') || 'Are you sure you want to log out?',
       [
         { text: t('common.cancel') || 'Cancel', style: 'cancel' },
         {
-          text: t('common.logout'),
+          text: t('common.logout') || 'Log Out',
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -141,7 +146,9 @@ export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigati
             onPress={handleLogout}
             activeOpacity={0.8}
           >
-            <Text style={styles.logoutBtnText}>🚪 {t('common.logout')}</Text>
+            <Text style={styles.logoutBtnText}>
+              {isGuest ? `🚪 ${t('welcome.heroTitle') || 'Exit to Main Menu'}` : `🚪 ${t('common.logout') || 'Log Out'}`}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

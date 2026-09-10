@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,6 +19,22 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
   const insets = useSafeAreaInsets();
   const { t } = useLocalization();
   const { order } = route.params;
+
+  const handleContinueShopping = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'NearbyShops' }],
+    });
+  };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      handleContinueShopping();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, []);
 
   const hasStorePriced =
     (order as any).is_total_final === false ||
@@ -141,7 +158,7 @@ export const OrderConfirmationScreen: React.FC<Props> = ({ navigation, route }) 
 
           <TouchableOpacity
             style={styles.textBtn}
-            onPress={() => navigation.navigate('NearbyShops')}
+            onPress={handleContinueShopping}
             activeOpacity={0.7}
           >
             <Text style={styles.textBtnText}>← {t('orderConfirmation.continueShopping')}</Text>

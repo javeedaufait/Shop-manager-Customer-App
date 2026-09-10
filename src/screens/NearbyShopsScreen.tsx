@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  BackHandler,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '../components/common/Header';
@@ -16,6 +18,7 @@ import { theme } from '../utils/theme';
 import { useLocalization } from '../hooks/useLocalization';
 import { useLocation } from '../hooks/useLocation';
 import { useCart } from '../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
 import { shopsApi } from '../api/shopsApi';
 import { Shop } from '../types/shops';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,6 +31,7 @@ interface NearbyShopsScreenProps {
 export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { t } = useLocalization();
+  const { user, isAuthenticated, isGuest, exitGuestMode, logout } = useAuth();
   const { location, isLoading: locationLoading, requestCurrentLocation } = useLocation();
   const { cart } = useCart();
 
@@ -78,6 +82,67 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
     }
   }, [fetchShops, locationLoading]);
 
+  // Hardware Back button handling for guest users
+  useEffect(() => {
+    if (!isGuest) return;
+    const backAction = () => {
+      exitGuestMode();
+      return true;
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [isGuest, exitGuestMode]);
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('common.logout') || 'Log Out',
+      t('auth.logoutConfirm') || 'Are you sure you want to log out?',
+      [
+        { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('common.logout') || 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleProfilePress = () => {
+    if (isGuest || !isAuthenticated) {
+      Alert.alert(
+        'Guest Mode',
+        t('welcome.heroSubtitle') || 'You are exploring NearMart as a guest.',
+        [
+          { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+          {
+            text: t('auth.loginTitle') || 'Login / Register',
+            onPress: exitGuestMode,
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        user?.name || t('roles.customer') || 'My Account',
+        user?.email || '',
+        [
+          { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+          {
+            text: t('home.profileTitle') || 'View Profile',
+            onPress: () => navigation.navigate('CustomerHome'),
+          },
+          {
+            text: `🚪 ${t('common.logout') || 'Log Out'}`,
+            style: 'destructive',
+            onPress: handleLogout,
+          },
+        ]
+      );
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchShops();
@@ -107,6 +172,17 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
 
       {/* Top Location Selector Bar */}
       <View style={styles.locationBar}>
+        {isGuest && (
+          <TouchableOpacity
+            style={styles.guestBackBtn}
+            activeOpacity={0.8}
+            onPress={exitGuestMode}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.guestBackIcon}>‹</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.locationSelector}
           activeOpacity={0.8}
@@ -147,7 +223,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           <TouchableOpacity
             style={styles.profileBtn}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('CustomerHome')}
+            onPress={handleProfilePress}
           >
             <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
@@ -279,6 +355,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     marginBottom: theme.spacing.sm,
     gap: theme.spacing.sm,
+  },
+  guestBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.sm,
+  },
+  guestBackIcon: {
+    fontSize: 26,
+    color: theme.colors.text,
+    lineHeight: 28,
   },
   locationSelector: {
     flex: 1,

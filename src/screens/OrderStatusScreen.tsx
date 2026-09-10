@@ -9,6 +9,7 @@ import {
   Linking,
   ActivityIndicator,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -217,11 +218,40 @@ export const OrderStatusScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      const routes = navigation.getState()?.routes;
+      const prevRoute = routes && routes.length >= 2 ? routes[routes.length - 2]?.name : null;
+      if (prevRoute === 'OrderConfirmation' || prevRoute === 'Checkout') {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'NearbyShops' }],
+        });
+        return;
+      }
+      navigation.goBack();
+    } else {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'NearbyShops' }],
+      });
+    }
+  };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      handleBack();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, []);
+
   if (isLoading || !order) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Text style={styles.backIcon}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('orders.trackStatus')}</Text>
@@ -246,7 +276,7 @@ export const OrderStatusScreen: React.FC<Props> = ({ navigation, route }) => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>

@@ -14,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isGuest: boolean;
   continueAsGuest: () => void;
+  exitGuestMode: () => void;
   isLoading: boolean;
   language: SupportedLanguage;
   setLanguage: (lang: SupportedLanguage) => Promise<void>;
@@ -79,6 +80,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const continueAsGuest = () => {
     setIsGuest(true);
+  };
+
+  const exitGuestMode = () => {
+    setIsGuest(false);
   };
 
   const handleClearSession = async () => {
@@ -161,6 +166,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         refreshProfile,
         isGuest,
         continueAsGuest,
+        exitGuestMode,
       }}
     >
       {children}
