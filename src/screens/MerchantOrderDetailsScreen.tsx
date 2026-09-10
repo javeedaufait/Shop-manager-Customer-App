@@ -82,6 +82,36 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
     }
   };
 
+  const handleWhatsAppCustomer = (
+    phone?: string,
+    customerName?: string,
+    orderNum?: string,
+    pickupCode?: string
+  ) => {
+    if (!phone) return;
+    const cleanDigits = phone.replace(/[^0-9]/g, '');
+    const internationalPhone = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+    const shopTitle = order?.shop_name || 'NearMart Partner Store';
+    const message = `Hello ${customerName || 'Customer'},\nThis is ${shopTitle} regarding your NearMart order #${orderNum || ''}.\nYour pickup code is: ${pickupCode || ''}.\n\nYour order is being processed for counter pickup! Feel free to reply here if you have any questions.`;
+    const encodedText = encodeURIComponent(message);
+    const whatsappUrl = `whatsapp://send?phone=${internationalPhone}&text=${encodedText}`;
+    const webWhatsappUrl = `https://wa.me/${internationalPhone}?text=${encodedText}`;
+
+    Linking.canOpenURL(whatsappUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(whatsappUrl);
+        } else {
+          return Linking.openURL(webWhatsappUrl);
+        }
+      })
+      .catch(() => {
+        Linking.openURL(webWhatsappUrl).catch(() => {
+          Alert.alert('Notice', 'Unable to open WhatsApp.');
+        });
+      });
+  };
+
   // Status transitions
   const handleStatusTransition = async (nextStatus: OrderStatus, reason?: string) => {
     if (!order) return;
@@ -414,12 +444,30 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardSectionTitle}>{t('merchantOrders.customer')}</Text>
             {!!order.customer_phone && (
-              <TouchableOpacity
-                style={styles.callButton}
-                onPress={() => handleCallCustomer(order.customer_phone)}
-              >
-                <Text style={styles.callButtonText}>📞 {t('merchantOrders.callCustomer')}</Text>
-              </TouchableOpacity>
+              <View style={styles.contactActionsRow}>
+                <TouchableOpacity
+                  style={styles.callButton}
+                  onPress={() => handleCallCustomer(order.customer_phone)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.callButtonText}>📞 {t('merchantOrders.callCustomer')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.whatsappButton}
+                  onPress={() =>
+                    handleWhatsAppCustomer(
+                      order.customer_phone,
+                      order.customer_name,
+                      order.order_number,
+                      order.pickup_code
+                    )
+                  }
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.whatsappButtonText}>💬 {t('merchantOrders.whatsappCustomer') || 'WhatsApp'}</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
           <View style={styles.customerDetailRow}>
@@ -1035,6 +1083,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#C2410C',
   },
+  contactActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   callButton: {
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
@@ -1047,6 +1100,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#2563EB',
+  },
+  whatsappButton: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  whatsappButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#059669',
   },
   customerDetailRow: {
     gap: 2,

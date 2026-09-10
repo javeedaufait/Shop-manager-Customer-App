@@ -320,6 +320,7 @@ export const ml = {
       },
       customer: "ഉപഭോക്താവ്",
       callCustomer: "വിളിക്കുക",
+      whatsappCustomer: "വാട്ട്‌സ്ആപ്പ്",
       pickupCode: "പിക്കപ്പ് കോഡ്",
       pickupCodeInstruction: "പിക്കപ്പ് ഉറപ്പാക്കാൻ ഉപഭോക്താവിനോട് ഈ കോഡ് ചോദിക്കുക",
       orderItems: "ഓർഡർ സാധനങ്ങൾ",
