@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { theme } from '../utils/theme';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalization } from '../hooks/useLocalization';
+import { storageService } from '../services/storageService';
+import { ENV } from '../config/env';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/types';
 
@@ -17,15 +19,24 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
   useEffect(() => {
     if (!isLoading && navigation?.replace) {
       if (!isAuthenticated) {
-        // Unauthenticated -> proceed to Language selection or Welcome
-        const timer = setTimeout(() => {
-          if (navigation?.replace) {
-            navigation.replace('LanguageSelect');
+        const checkBootTarget = async () => {
+          try {
+            const hasSeenOnboarding = await storageService.getItem(
+              ENV.storageKeys.onboardingCompleted
+            );
+            if (hasSeenOnboarding !== 'true') {
+              navigation.replace('Onboarding');
+            } else {
+              navigation.replace('Welcome');
+            }
+          } catch {
+            navigation.replace('Welcome');
           }
-        }, 1200);
+        };
+
+        const timer = setTimeout(checkBootTarget, 1000);
         return () => clearTimeout(timer);
       }
-      // If authenticated, RootNavigator automatically switches stacks!
     }
   }, [isLoading, isAuthenticated, navigation]);
 

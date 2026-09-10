@@ -4,6 +4,7 @@ import { Order } from '../types/orders';
 
 export type AuthStackParamList = {
   Splash: undefined;
+  Onboarding: undefined;
   LanguageSelect: undefined;
   Welcome: undefined;
   CustomerLogin: undefined;
