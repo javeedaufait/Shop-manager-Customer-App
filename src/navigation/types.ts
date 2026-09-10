@@ -18,7 +18,7 @@ export type CustomerStackParamList = {
   CustomerHome: undefined;
   ShopCatalog: { shopId: number; shopName: string; shop?: Shop };
   ShopDetails: { shopId: number; shop: Shop };
-  ProductDetail: { product: Product; shopName: string };
+  ProductDetail: { product: Product; shopName: string; shopId?: number };
   Cart: undefined;
   Checkout: undefined;
   OrderConfirmation: { order: Order };

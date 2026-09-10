@@ -285,6 +285,7 @@ export const ShopCatalogScreen: React.FC<Props> = ({ route, navigation }) => {
                 navigation.navigate('ProductDetail', {
                   product: item,
                   shopName: shop?.name || shopName,
+                  shopId: shopId,
                 })
               }
             />

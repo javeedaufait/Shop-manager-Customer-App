@@ -12,6 +12,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../navigation/types';
 import { useCart } from '../hooks/useCart';
 import { QuantityControl } from '../components/cart/QuantityControl';
+import { FloatingCartBar } from '../components/cart/FloatingCartBar';
+import { CartConflictModal } from '../components/cart/CartConflictModal';
+import { useLocalization } from '../hooks/useLocalization';
 import { theme } from '../utils/theme';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'ProductDetail'>;
@@ -20,9 +23,14 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
   const { product, shopName } = route.params;
   const { cart, getItemQuantity, addToCart, updateQuantity, getItem } = useCart();
+  const { t } = useLocalization();
 
-  const shopId = cart.shop_id || 101;
+  const shopId = route.params.shopId || cart.shop_id || 101;
   const quantity = getItemQuantity(product.id);
+
+  const hasStorePriced = cart.items.some(
+    (it) => it.price <= 0 || (it as any).pricing_type === 'store_priced'
+  );
 
   const isAvailable =
     product.available !== false &&
@@ -186,31 +194,75 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         </View>
       </ScrollView>
 
+      {/* Floating Cart Bar (Sticky when this shop has items but this product is not currently in cart) */}
+      {quantity === 0 && (
+        <FloatingCartBar
+          currentShopId={shopId}
+          onPressViewCart={() => navigation.navigate('Cart')}
+          bottomOffset={76 + Math.max(insets.bottom, 12)}
+        />
+      )}
+
       {/* Bottom Cart Action Bar */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <View style={styles.bottomPriceColumn}>
-          <Text style={styles.bottomPriceLabel}>
-            {quantity > 0 ? `${quantity} in Cart` : 'Item Price'}
-          </Text>
-          <Text style={styles.bottomPriceValue}>
-            ₹{quantity > 0 ? effectivePrice * quantity : effectivePrice}
-          </Text>
-        </View>
+        {quantity > 0 ? (
+          <>
+            <View style={styles.bottomLeftCol}>
+              <Text style={styles.itemSubtotalText} numberOfLines={1}>
+                ₹{effectivePrice * quantity}
+                <Text style={styles.itemSubtotalCount}> ({quantity} in cart)</Text>
+              </Text>
+              <QuantityControl
+                quantity={quantity}
+                onIncrease={handleIncrease}
+                onDecrease={handleDecrease}
+                onAdd={handleIncrease}
+                size="medium"
+              />
+            </View>
 
-        {isAvailable ? (
-          <QuantityControl
-            quantity={quantity}
-            onIncrease={handleIncrease}
-            onDecrease={handleDecrease}
-            onAdd={handleIncrease}
-            size="medium"
-          />
+            <TouchableOpacity
+              style={styles.viewCartBtn}
+              onPress={() => navigation.navigate('Cart')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.viewCartBtnLeft}>
+                <Text style={styles.viewCartBtnTitle}>{t('cart.viewCart') || 'View Cart'}</Text>
+                <Text style={styles.viewCartBtnSub}>
+                  {cart.total_quantity} {cart.total_quantity === 1 ? 'item' : 'items'} • ₹{cart.subtotal}{hasStorePriced ? '*' : ''}
+                </Text>
+              </View>
+              <View style={styles.viewCartBtnRight}>
+                <Text style={styles.viewCartBtnArrow}>›</Text>
+              </View>
+            </TouchableOpacity>
+          </>
         ) : (
-          <View style={styles.outOfStockBtn}>
-            <Text style={styles.outOfStockBtnText}>Out of Stock</Text>
-          </View>
+          <>
+            <View style={styles.bottomPriceColumn}>
+              <Text style={styles.bottomPriceLabel}>Item Price</Text>
+              <Text style={styles.bottomPriceValue}>₹{effectivePrice}</Text>
+            </View>
+
+            {isAvailable ? (
+              <QuantityControl
+                quantity={quantity}
+                onIncrease={handleIncrease}
+                onDecrease={handleDecrease}
+                onAdd={handleIncrease}
+                size="medium"
+              />
+            ) : (
+              <View style={styles.outOfStockBtn}>
+                <Text style={styles.outOfStockBtnText}>Out of Stock</Text>
+              </View>
+            )}
+          </>
         )}
       </View>
+
+      {/* Single-Shop Conflict Confirmation Modal */}
+      <CartConflictModal />
     </View>
   );
 };
@@ -279,7 +331,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   scrollContent: {
-    paddingBottom: 90,
+    paddingBottom: 140,
   },
   imageContainer: {
     width: '100%',
@@ -520,6 +572,63 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '900',
     color: theme.colors.primary,
+  },
+  bottomLeftCol: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  itemSubtotalText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
+  itemSubtotalCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+  },
+  viewCartBtn: {
+    flex: 1,
+    marginLeft: 14,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  viewCartBtnLeft: {
+    flexDirection: 'column',
+  },
+  viewCartBtnTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  viewCartBtnSub: {
+    color: '#D1FAE5',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  viewCartBtnRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewCartBtnArrow: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   outOfStockBtn: {
     backgroundColor: '#F3F4F6',

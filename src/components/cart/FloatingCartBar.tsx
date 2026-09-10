@@ -1,18 +1,22 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useCart } from '../../hooks/useCart';
+import { useLocalization } from '../../hooks/useLocalization';
 import { theme } from '../../utils/theme';
 
 interface FloatingCartBarProps {
   currentShopId: number;
   onPressViewCart: () => void;
+  bottomOffset?: number;
 }
 
 export const FloatingCartBar: React.FC<FloatingCartBarProps> = ({
   currentShopId,
   onPressViewCart,
+  bottomOffset,
 }) => {
   const { cart } = useCart();
+  const { t } = useLocalization();
 
   // Only display if cart has items from this specific shop
   if (!cart.shop_id || cart.items.length === 0 || cart.shop_id !== currentShopId) {
@@ -24,7 +28,7 @@ export const FloatingCartBar: React.FC<FloatingCartBarProps> = ({
   );
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, bottomOffset !== undefined && { bottom: bottomOffset }]}>
       <TouchableOpacity
         style={styles.bar}
         activeOpacity={0.9}
@@ -38,7 +42,7 @@ export const FloatingCartBar: React.FC<FloatingCartBarProps> = ({
         </View>
 
         <View style={styles.rightAction}>
-          <Text style={styles.viewCartText}>View Cart</Text>
+          <Text style={styles.viewCartText}>{t('cart.viewCart') || 'View Cart'}</Text>
           <Text style={styles.arrowIcon}>›</Text>
         </View>
       </TouchableOpacity>
