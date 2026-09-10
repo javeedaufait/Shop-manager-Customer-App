@@ -168,21 +168,10 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header />
+      <Header onBack={isGuest ? exitGuestMode : undefined} />
 
       {/* Top Location Selector Bar */}
       <View style={styles.locationBar}>
-        {isGuest && (
-          <TouchableOpacity
-            style={styles.guestBackBtn}
-            activeOpacity={0.8}
-            onPress={exitGuestMode}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.guestBackIcon}>‹</Text>
-          </TouchableOpacity>
-        )}
-
         <TouchableOpacity
           style={styles.locationSelector}
           activeOpacity={0.8}
@@ -192,8 +181,10 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
             <Text style={styles.pinIcon}>📍</Text>
           </View>
           <View style={styles.locationTextWrap}>
-            <Text style={styles.locationSubText}>{'Near You in'}</Text>
-            <Text style={styles.locationTitle} numberOfLines={1}>
+            <Text style={styles.locationSubText} numberOfLines={1}>
+              Near You in
+            </Text>
+            <Text style={styles.locationTitle} numberOfLines={1} ellipsizeMode="tail">
               {locationDisplayText}
             </Text>
           </View>
@@ -398,6 +389,7 @@ const styles = StyleSheet.create({
   },
   locationTextWrap: {
     flex: 1,
+    minWidth: 0,
   },
   locationSubText: {
     ...theme.typography.caption,
@@ -414,6 +406,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     marginLeft: 6,
     textDecorationLine: 'underline',
+    flexShrink: 0,
   },
   headerCartBadge: {
     position: 'absolute',
