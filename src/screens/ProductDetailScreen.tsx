@@ -207,19 +207,13 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         {quantity > 0 ? (
           <>
-            <View style={styles.bottomLeftCol}>
-              <Text style={styles.itemSubtotalText} numberOfLines={1}>
-                ₹{effectivePrice * quantity}
-                <Text style={styles.itemSubtotalCount}> ({quantity} in cart)</Text>
-              </Text>
-              <QuantityControl
-                quantity={quantity}
-                onIncrease={handleIncrease}
-                onDecrease={handleDecrease}
-                onAdd={handleIncrease}
-                size="medium"
-              />
-            </View>
+            <QuantityControl
+              quantity={quantity}
+              onIncrease={handleIncrease}
+              onDecrease={handleDecrease}
+              onAdd={handleIncrease}
+              size="medium"
+            />
 
             <TouchableOpacity
               style={styles.viewCartBtn}
@@ -573,52 +567,38 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: theme.colors.primary,
   },
-  bottomLeftCol: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  itemSubtotalText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: theme.colors.text,
-  },
-  itemSubtotalCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-  },
   viewCartBtn: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 12,
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    height: 48,
+    borderRadius: 10,
+    height: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     elevation: 4,
     shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   viewCartBtnLeft: {
     flexDirection: 'column',
+    justifyContent: 'center',
   },
   viewCartBtnTitle: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 0.2,
+    lineHeight: 16,
   },
   viewCartBtnSub: {
     color: '#D1FAE5',
     fontSize: 11,
     fontWeight: '700',
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 13,
   },
   viewCartBtnRight: {
     flexDirection: 'row',

@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   stepperMedium: {
-    height: 42,
+    height: 46,
     minWidth: 120,
     paddingHorizontal: 8,
     borderRadius: 10,
