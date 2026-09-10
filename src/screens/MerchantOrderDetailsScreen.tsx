@@ -33,7 +33,7 @@ interface WeighedInputState {
 
 export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const { orderId, order: initialOrder } = route.params;
 
   const [order, setOrder] = useState<Order | null>(initialOrder || null);
@@ -82,17 +82,66 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
     }
   };
 
-  const handleWhatsAppCustomer = (
-    phone?: string,
-    customerName?: string,
-    orderNum?: string,
-    pickupCode?: string
-  ) => {
-    if (!phone) return;
+  const getWhatsAppMessage = (orderObj: Order, lang: string) => {
+    const customerName = orderObj.customer_name || (lang === 'ml' ? 'ഉപഭോക്താവ്' : 'Customer');
+    const shopTitle = orderObj.shop_name || (lang === 'ml' ? 'നിയർമാർട്ട് സ്റ്റോർ' : 'NearMart Store');
+    const orderNum = orderObj.order_number || String(orderObj.id);
+    const code = orderObj.pickup_code || '';
+    const total = orderObj.total ? `₹${orderObj.total}` : '';
+
+    if (lang === 'ml') {
+      switch (orderObj.status) {
+        case 'ready_for_pickup':
+          return `നമസ്കാരം ${customerName},\n${shopTitle}-ൽ നിന്നുള്ള നിങ്ങളുടെ ഓർഡർ #${orderNum} കൗണ്ടർ പിക്കപ്പിനായി തയ്യാറാണ്! 🎉\n\n📌 പിക്കപ്പ് കോഡ്: *${code}*\n${total ? `💰 ആകെ തുക: *${total}*\n` : ''}\nകടയിലെത്തി പിക്കപ്പ് കോഡ് കാണിച്ച് ഓർഡർ വാങ്ങാവുന്നതാണ്. നന്ദി!`;
+
+        case 'preparing':
+          return `നമസ്കാരം ${customerName},\n${shopTitle}-ൽ നിന്നുള്ള നിങ്ങളുടെ ഓർഡർ #${orderNum} പായ്ക്ക് ചെയ്തു തയ്യാറാക്കുന്നു. 📦\n\n📌 പിക്കപ്പ് കോഡ്: *${code}*${total ? `\n💰 ആകെ തുക: *${total}*` : ''}\n\nഓർഡർ പിക്കപ്പിനായി തയ്യാറാകുമ്പോൾ ഞങ്ങൾ ഉടൻ അറിയിക്കാം. നന്ദി!`;
+
+        case 'accepted':
+          return `നമസ്കാരം ${customerName},\n${shopTitle} നിങ്ങളുടെ ഓർഡർ #${orderNum} സ്വീകരിച്ചിരിക്കുന്നു. ✅\n\n📌 പിക്കപ്പ് കോഡ്: *${code}*\n\nഞങ്ങൾ ഉടൻ തന്നെ സാധനങ്ങൾ പാക്ക് ചെയ്യാൻ തുടങ്ങും. നന്ദി!`;
+
+        case 'completed':
+          return `നമസ്കാരം ${customerName},\nനിയർമാർട്ട് വഴി ${shopTitle}-ൽ നിന്ന് സാധനങ്ങൾ വാങ്ങിയതിന് നന്ദി! ✨\nനിങ്ങളുടെ ഓർഡർ #${orderNum} വിജയകരമായി പൂർത്തിയായി.\nവീണ്ടും സേവിക്കാൻ കാത്തിരിക്കുന്നു.`;
+
+        case 'rejected':
+        case 'cancelled':
+          return `നമസ്കാരം ${customerName},\n${shopTitle}-ൽ നിന്നുള്ള നിങ്ങളുടെ ഓർഡർ #${orderNum} നൽകാൻ സാധിച്ചില്ല എന്ന് ഖേദപൂർവ്വം അറിയിക്കുന്നു.${orderObj.rejection_reason ? `\nകാരണം: ${orderObj.rejection_reason}` : ''}\nനേരിട്ട അസൗകര്യത്തിൽ ഞങ്ങൾ ക്ഷമ ചോദിക്കുന്നു.`;
+
+        case 'pending':
+        default:
+          return `നമസ്കാരം ${customerName},\n${shopTitle} നിങ്ങളുടെ ഓർഡർ #${orderNum} ലഭിച്ചിട്ടുണ്ട്.\n\n📌 പിക്കപ്പ് കോഡ്: *${code}*\n\nഉടൻ തന്നെ ഓർഡർ സ്വീകരിച്ചു തയ്യാറാക്കുന്നതായിരിക്കും. നന്ദി!`;
+      }
+    } else {
+      switch (orderObj.status) {
+        case 'ready_for_pickup':
+          return `Hello ${customerName},\nYour NearMart order #${orderNum} from ${shopTitle} is READY for counter pickup! 🎉\n\n📌 Pickup Code: *${code}*\n${total ? `💰 Total Amount: *${total}*\n` : ''}\nPlease show this pickup code at the store counter to collect your order. Thank you!`;
+
+        case 'preparing':
+          return `Hello ${customerName},\nYour NearMart order #${orderNum} is being packed and prepared by ${shopTitle}. 📦\n\n📌 Pickup Code: *${code}*${total ? `\n💰 Total Amount: *${total}*` : ''}\n\nWe will notify you as soon as it is ready for pickup. Thank you!`;
+
+        case 'accepted':
+          return `Hello ${customerName},\nYour NearMart order #${orderNum} has been accepted by ${shopTitle}. ✅\n\n📌 Pickup Code: *${code}*\n\nWe are preparing your items. Thank you!`;
+
+        case 'completed':
+          return `Hello ${customerName},\nThank you for shopping with ${shopTitle} via NearMart! ✨\nYour order #${orderNum} has been completed and collected.\nWe look forward to serving you again!`;
+
+        case 'rejected':
+        case 'cancelled':
+          return `Hello ${customerName},\nRegarding your NearMart order #${orderNum} from ${shopTitle}: unfortunately, the order could not be fulfilled.${orderObj.rejection_reason ? `\nReason: ${orderObj.rejection_reason}` : ''}\nWe sincerely apologize for the inconvenience.`;
+
+        case 'pending':
+        default:
+          return `Hello ${customerName},\nWe have received your NearMart order #${orderNum} at ${shopTitle}.\n\n📌 Pickup Code: *${code}*\n\nWe will confirm and begin packing your items shortly. Thank you!`;
+      }
+    }
+  };
+
+  const handleWhatsAppCustomer = (phone?: string) => {
+    if (!phone || !order) return;
     const cleanDigits = phone.replace(/[^0-9]/g, '');
     const internationalPhone = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
-    const shopTitle = order?.shop_name || 'NearMart Partner Store';
-    const message = `Hello ${customerName || 'Customer'},\nThis is ${shopTitle} regarding your NearMart order #${orderNum || ''}.\nYour pickup code is: ${pickupCode || ''}.\n\nYour order is being processed for counter pickup! Feel free to reply here if you have any questions.`;
+
+    const message = getWhatsAppMessage(order, language);
     const encodedText = encodeURIComponent(message);
     const whatsappUrl = `whatsapp://send?phone=${internationalPhone}&text=${encodedText}`;
     const webWhatsappUrl = `https://wa.me/${internationalPhone}?text=${encodedText}`;
@@ -455,14 +504,7 @@ export const MerchantOrderDetailsScreen: React.FC<Props> = ({ navigation, route 
 
                 <TouchableOpacity
                   style={styles.whatsappButton}
-                  onPress={() =>
-                    handleWhatsAppCustomer(
-                      order.customer_phone,
-                      order.customer_name,
-                      order.order_number,
-                      order.pickup_code
-                    )
-                  }
+                  onPress={() => handleWhatsAppCustomer(order.customer_phone)}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.whatsappButtonText}>💬 {t('merchantOrders.whatsappCustomer') || 'WhatsApp'}</Text>
