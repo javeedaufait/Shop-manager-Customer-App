@@ -47,6 +47,26 @@ export const MerchantHomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
+        {/* Store Catalog Quick Action Card (APP-9.2) */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.ordersActionCard}
+          onPress={() => navigation.navigate('MerchantCatalog')}
+        >
+          <View style={styles.ordersActionLeft}>
+            <View style={[styles.ordersIconCircle, { backgroundColor: '#ECFDF5' }]}>
+              <Text style={{ fontSize: 24 }}>🛒</Text>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.ordersActionTitle}>{t('merchantCatalog.title')}</Text>
+              <Text style={styles.ordersActionSubtitle}>{t('merchantCatalog.subtitle')}</Text>
+            </View>
+          </View>
+          <View style={styles.ordersActionArrow}>
+            <Text style={styles.arrowText}>›</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Linked Shop Card */}
         {shop ? (
           <Card style={styles.shopCard}>

@@ -21,6 +21,41 @@ export interface MerchantOrdersResponse {
   };
 }
 
+export interface MerchantCatalogProduct {
+  id: number;
+  product_id: number | null;
+  is_standalone: boolean;
+  name: string;
+  category?: string;
+  unit: string | null;
+  brand: string | null;
+  barcode: string | null;
+  shop_sku: string | null;
+  price: number;
+  sale_price: number | null;
+  available: boolean;
+  stock_status: 'instock' | 'outofstock';
+  image: string | null;
+}
+
+export interface GetMerchantProductsParams {
+  search?: string;
+  status?: 'all' | 'instock' | 'outofstock';
+  page?: number;
+  limit?: number;
+  lang?: 'en' | 'ml';
+}
+
+export interface MerchantProductsResponse {
+  products: MerchantCatalogProduct[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+}
+
 export const merchantApi = {
   /**
    * Fetch paginated list of orders for the merchant's assigned shop.
@@ -99,5 +134,38 @@ export const merchantApi = {
       { items }
     );
     return resp.order;
+  },
+
+  /**
+   * Fetch paginated list of catalog products for the merchant's assigned shop.
+   * Supports search and availability status filtering ('all', 'instock', 'outofstock').
+   */
+  async getProducts(params?: GetMerchantProductsParams): Promise<MerchantProductsResponse> {
+    const query: Record<string, string | number> = {};
+    if (params?.search) query.search = params.search;
+    if (params?.status && params.status !== 'all') query.status = params.status;
+    if (params?.page) query.page = params.page;
+    if (params?.limit) query.limit = params.limit;
+    if (params?.lang) query.lang = params.lang;
+
+    const resp = await apiClient.get<MerchantProductsResponse>(
+      ENDPOINTS.merchant.products,
+      query
+    );
+    return resp;
+  },
+
+  /**
+   * Toggle or update availability for a specific shop catalog product.
+   */
+  async updateProductAvailability(
+    productId: number | string,
+    available: boolean
+  ): Promise<MerchantCatalogProduct> {
+    const resp = await apiClient.post<{ product: MerchantCatalogProduct }>(
+      ENDPOINTS.merchant.updateAvailability(productId),
+      { available }
+    );
+    return resp.product;
   },
 };

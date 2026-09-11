@@ -32,6 +32,8 @@ export const ENDPOINTS = {
     orderDetail: (orderId: number | string) => `/merchant/orders/${orderId}`,
     updateStatus: (orderId: number | string) => `/merchant/orders/${orderId}/status`,
     weigh: (orderId: number | string) => `/merchant/orders/${orderId}/weigh`,
+    products: '/merchant/products',
+    updateAvailability: (productId: number | string) => `/merchant/products/${productId}/availability`,
   },
   notifications: {
     registerToken: '/notifications/register-token',
