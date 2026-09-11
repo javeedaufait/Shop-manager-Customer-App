@@ -16,6 +16,7 @@ import { CustomerStackParamList } from '../navigation/types';
 import { useLocalization } from '../hooks/useLocalization';
 import { ordersApi } from '../api/ordersApi';
 import { Order, OrderStatus, PricingStatus, PaymentStatus } from '../types/orders';
+import { BuyAgainCard } from '../components/orders/BuyAgainCard';
 import { theme } from '../utils/theme';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'OrderDetails'>;
@@ -282,6 +283,22 @@ export const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {/* Buy Again Section for Completed Orders */}
+        {order.status === 'completed' && (
+          <View style={{ marginBottom: 14 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 8, paddingHorizontal: 4 }]}>
+              🔄 {t('reorder.title')}
+            </Text>
+            <BuyAgainCard
+              order={order}
+              onViewCart={() => navigation.navigate('Cart')}
+              onNavigateToShop={(shopId, shopName) =>
+                navigation.navigate('ShopCatalog', { shopId, shopName })
+              }
+            />
+          </View>
+        )}
 
         {/* Ordered Items */}
         <View style={styles.card}>

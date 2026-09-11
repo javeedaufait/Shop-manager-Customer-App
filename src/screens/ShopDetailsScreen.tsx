@@ -12,12 +12,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../navigation/types';
 import { theme } from '../utils/theme';
+import { useFavorites } from '../hooks/useFavorites';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'ShopDetails'>;
 
 export const ShopDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
   const { shop } = route.params;
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const fav = isFavorite(shop.shop_id);
 
   const handleCall = () => {
     if (shop?.phone) {
@@ -37,7 +40,13 @@ export const ShopDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Store Information</Text>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity
+          style={styles.favoriteBtn}
+          onPress={() => toggleFavorite(shop)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.favoriteIcon}>{fav ? '❤️' : '🤍'}</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -338,5 +347,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  favoriteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favoriteIcon: {
+    fontSize: 18,
   },
 });

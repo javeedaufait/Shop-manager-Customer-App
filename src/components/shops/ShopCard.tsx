@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Shop } from '../../types/shops';
 import { theme } from '../../utils/theme';
 import { useLocalization } from '../../hooks/useLocalization';
+import { useFavorites } from '../../hooks/useFavorites';
 
 interface ShopCardProps {
   shop: Shop;
@@ -11,7 +12,9 @@ interface ShopCardProps {
 
 export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
   const { t } = useLocalization();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const isOpen = shop.is_open;
+  const fav = isFavorite(shop.shop_id);
 
   return (
     <TouchableOpacity
@@ -32,6 +35,16 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onPress }) => {
             <Text style={styles.placeholderIcon}>🏬</Text>
           </View>
         )}
+
+        {/* Favorite Heart Button */}
+        <TouchableOpacity
+          style={[styles.favoriteBtn, fav && styles.favoriteBtnActive]}
+          activeOpacity={0.8}
+          onPress={() => toggleFavorite(shop)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.favoriteIcon}>{fav ? '❤️' : '🤍'}</Text>
+        </TouchableOpacity>
 
         {/* Distance Badge */}
         {shop.distance_text ? (
@@ -256,5 +269,24 @@ const styles = StyleSheet.create({
   viewShopText: {
     ...theme.typography.smallBold,
     color: theme.colors.primary,
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    ...theme.shadows.sm,
+  },
+  favoriteBtnActive: {
+    backgroundColor: '#ffffff',
+  },
+  favoriteIcon: {
+    fontSize: 18,
   },
 });

@@ -149,4 +149,44 @@ export const ordersApi = {
 
     throw new Error('Order not found for status update');
   },
+
+  /**
+   * Revalidate previous order items against live catalog pricing and availability.
+   */
+  async getReorderValidation(orderId: number | string): Promise<ReorderValidationResponse> {
+    return apiClient.get<ReorderValidationResponse>(`/orders/${orderId}/reorder`);
+  },
 };
+
+export interface ReorderItem {
+  product_id: number;
+  master_product_id?: number | null;
+  name: string;
+  unit?: string | null;
+  image?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  current_price: number;
+  regular_price: number;
+  sale_price?: number | null;
+  old_price: number;
+  price_changed: boolean;
+  pricing_type: 'fixed' | 'store_priced';
+  is_store_priced: boolean;
+  available: boolean;
+  stock_quantity?: number | null;
+  requested_quantity: number;
+  can_reorder: boolean;
+  unavailable_reason?: string | null;
+}
+
+export interface ReorderValidationResponse {
+  order_id: number;
+  shop_id: number;
+  shop_name: string;
+  items: ReorderItem[];
+  all_available: boolean;
+  available_count: number;
+  unavailable_count: number;
+}
+

@@ -21,6 +21,7 @@ import { useLocalization } from '../hooks/useLocalization';
 import { useLocation } from '../hooks/useLocation';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
+import { useFavorites } from '../hooks/useFavorites';
 import { shopsApi } from '../api/shopsApi';
 import { searchApi } from '../api/searchApi';
 import { Shop } from '../types/shops';
@@ -38,8 +39,10 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
   const { user, isAuthenticated, isGuest, exitGuestMode, logout } = useAuth();
   const { location, isLoading: locationLoading, requestCurrentLocation } = useLocation();
   const { cart } = useCart();
+  const { favoriteShopIds, favoriteShops } = useFavorites();
 
   const [shops, setShops] = useState<Shop[]>([]);
+  const [selectedTab, setSelectedTab] = useState<'all' | 'favorites'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchProducts, setSearchProducts] = useState<NearbyProductResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -211,7 +214,14 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
     });
   };
 
-  const filteredShops = shops.filter((s) => {
+  const candidateShops =
+    selectedTab === 'favorites'
+      ? shops
+          .filter((s) => favoriteShopIds.includes(s.shop_id))
+          .concat(favoriteShops.filter((fs) => !shops.some((s) => s.shop_id === fs.shop_id)))
+      : shops;
+
+  const filteredShops = candidateShops.filter((s) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -303,6 +313,31 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Filter Tabs: All Stores vs Favorite Stores */}
+      {!isSearchActive && (
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabBtn, selectedTab === 'all' && styles.tabBtnActive]}
+            onPress={() => setSelectedTab('all')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabBtnText, selectedTab === 'all' && styles.tabBtnTextActive]}>
+              🏪 {t('favorites.allStores')} ({shops.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabBtn, selectedTab === 'favorites' && styles.tabBtnActive]}
+            onPress={() => setSelectedTab('favorites')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabBtnText, selectedTab === 'favorites' && styles.tabBtnTextActive]}>
+              ❤️ {t('favorites.favoriteStores')} ({favoriteShopIds.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Main Content Area */}
       {isLoading && !refreshing ? (
@@ -422,6 +457,19 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
             )}
           </ScrollView>
         )
+      ) : !isSearchActive && selectedTab === 'favorites' && filteredShops.length === 0 ? (
+        /* Favorites Empty State */
+        <View style={styles.centerContainer}>
+          <Text style={styles.stateEmoji}>❤️</Text>
+          <Text style={styles.stateTitle}>{t('favorites.emptyTitle')}</Text>
+          <Text style={styles.stateSubtitle}>{t('favorites.emptySubtitle')}</Text>
+          <TouchableOpacity
+            style={styles.primaryActionBtn}
+            onPress={() => setSelectedTab('all')}
+          >
+            <Text style={styles.primaryActionBtnText}>{t('favorites.exploreStores')}</Text>
+          </TouchableOpacity>
+        </View>
       ) : filteredShops.length === 0 ? (
         /* Normal State 2: Empty Shops State */
         <View style={styles.centerContainer}>
@@ -451,7 +499,9 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           }
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              <Text style={styles.feedTitle}>{t('shops.nearbyTitle')}</Text>
+              <Text style={styles.feedTitle}>
+                {selectedTab === 'favorites' ? t('favorites.favoriteStores') : t('shops.nearbyTitle')}
+              </Text>
               <Text style={styles.storeCount}>
                 {filteredShops.length} {t('shops.totalStores')}
               </Text>
@@ -602,6 +652,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textMuted,
     paddingHorizontal: 4,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+    gap: 10,
+  },
+  tabBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.sm,
+  },
+  tabBtnActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  tabBtnText: {
+    ...theme.typography.smallBold,
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  tabBtnTextActive: {
+    color: '#ffffff',
   },
   searchingBanner: {
     flexDirection: 'row',

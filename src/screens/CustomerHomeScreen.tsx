@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../utils/theme';
 import { Header } from '../components/common/Header';
 import { Card } from '../components/common/Card';
 import { RoleBadge } from '../components/common/RoleBadge';
+import { BuyAgainCard } from '../components/orders/BuyAgainCard';
+import { ordersApi } from '../api/ordersApi';
+import { Order } from '../types/orders';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalization } from '../hooks/useLocalization';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +20,26 @@ interface CustomerHomeScreenProps {
 export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigation }) => {
   const { user, isGuest, exitGuestMode, logout } = useAuth();
   const { t } = useLocalization();
+
+  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isGuest) {
+        setLoadingOrders(false);
+        return;
+      }
+      ordersApi
+        .getOrders(user?.phone || undefined)
+        .then((orders) => {
+          const completed = orders.filter((o) => o.status === 'completed');
+          setCompletedOrders(completed);
+        })
+        .catch((err) => console.warn('Failed to load completed orders:', err))
+        .finally(() => setLoadingOrders(false));
+    }, [isGuest, user?.phone])
+  );
 
   const handleLogout = () => {
     if (isGuest) {
@@ -99,6 +123,36 @@ export const CustomerHomeScreen: React.FC<CustomerHomeScreenProps> = ({ navigati
             <Text style={styles.value}>#{user?.id}</Text>
           </View>
         </Card>
+
+        {/* Buy Again Section */}
+        {!isGuest && (
+          <View style={{ marginBottom: theme.spacing.md }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🔄 {t('reorder.title')}</Text>
+              {completedOrders.length > 0 && (
+                <TouchableOpacity onPress={() => navigation.navigate('OrderHistory')}>
+                  <Text style={styles.sectionLink}>{t('orderConfirmation.viewHistory')} ›</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {completedOrders.length > 0 ? (
+              <BuyAgainCard
+                order={completedOrders[0]}
+                onViewCart={() => navigation.navigate('Cart')}
+                onNavigateToShop={(shopId, shopName) =>
+                  navigation.navigate('ShopCatalog', { shopId, shopName })
+                }
+              />
+            ) : !loadingOrders ? (
+              <Card style={styles.buyAgainEmptyCard}>
+                <Text style={styles.buyAgainEmptyEmoji}>🛍️</Text>
+                <Text style={styles.buyAgainEmptyTitle}>{t('reorder.emptyTitle')}</Text>
+                <Text style={styles.buyAgainEmptySubtitle}>{t('reorder.emptySubtitle')}</Text>
+              </Card>
+            ) : null}
+          </View>
+        )}
 
         {/* Quick Navigation Card */}
         <Card style={styles.navCard}>
@@ -307,5 +361,45 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    ...theme.typography.title,
+    fontSize: 17,
+    color: theme.colors.text,
+  },
+  sectionLink: {
+    ...theme.typography.smallBold,
+    color: theme.colors.primary,
+    fontSize: 13,
+  },
+  buyAgainEmptyCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.lg,
+  },
+  buyAgainEmptyEmoji: {
+    fontSize: 32,
+    marginBottom: 6,
+  },
+  buyAgainEmptyTitle: {
+    ...theme.typography.smallBold,
+    fontSize: 14,
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  buyAgainEmptySubtitle: {
+    ...theme.typography.caption,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
 });

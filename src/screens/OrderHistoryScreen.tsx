@@ -16,6 +16,7 @@ import { useLocalization } from '../hooks/useLocalization';
 import { useAuth } from '../hooks/useAuth';
 import { ordersApi } from '../api/ordersApi';
 import { Order, OrderStatus } from '../types/orders';
+import { BuyAgainCard } from '../components/orders/BuyAgainCard';
 import { theme } from '../utils/theme';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'OrderHistory'>;
@@ -154,13 +155,24 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
                 : `₹${item.final_total ?? item.total}`}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.trackBtn}
-            onPress={() => navigation.navigate('OrderStatus', { orderId: item.id, order: item })}
-          >
-            <Text style={styles.trackBtnText}>{t('orders.trackStatus')}</Text>
-            <Text style={styles.trackBtnArrow}>›</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {item.status === 'completed' && (
+              <TouchableOpacity
+                style={styles.buyAgainBtn}
+                onPress={() => navigation.navigate('OrderDetails', { orderId: item.id, order: item })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buyAgainBtnText}>🔄 {t('reorder.buyAgainBtn')}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.trackBtn}
+              onPress={() => navigation.navigate('OrderStatus', { orderId: item.id, order: item })}
+            >
+              <Text style={styles.trackBtnText}>{t('orders.trackStatus')}</Text>
+              <Text style={styles.trackBtnArrow}>›</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -229,6 +241,21 @@ export const OrderHistoryScreen: React.FC<Props> = ({ navigation }) => {
           renderItem={renderOrderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            activeTab === 'completed' && filteredOrders.length > 0 ? (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={styles.buyAgainHeaderTitle}>🔄 {t('reorder.title')}</Text>
+                <BuyAgainCard
+                  order={filteredOrders[0]}
+                  onViewCart={() => navigation.navigate('Cart')}
+                  onNavigateToShop={(shopId, shopName) =>
+                    navigation.navigate('ShopCatalog', { shopId, shopName })
+                  }
+                />
+                <Text style={styles.pastOrdersTitle}>{t('orders.completed')}</Text>
+              </View>
+            ) : null
+          }
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
           }
@@ -469,5 +496,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  buyAgainBtn: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  buyAgainBtnText: {
+    ...theme.typography.smallBold,
+    fontSize: 12,
+    color: '#059669',
+  },
+  buyAgainHeaderTitle: {
+    ...theme.typography.title,
+    fontSize: 16,
+    color: theme.colors.text,
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  pastOrdersTitle: {
+    ...theme.typography.smallBold,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 2,
   },
 });
