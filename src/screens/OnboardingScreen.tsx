@@ -33,7 +33,8 @@ interface SlideItem {
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isCompact = height < 720;
   const { t, language, setLanguage } = useLocalization();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -68,7 +69,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
     {
       id: 'slide-3',
       badgeKey: 'onboarding.slide3Badge',
-      icon: '🤝',
+      icon: '🛍️',
       iconBg: '#ECFDF5',
       titleKey: 'onboarding.slide3Title',
       descKey: 'onboarding.slide3Desc',
@@ -147,27 +148,27 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
         renderItem={({ item }) => (
           <View style={[styles.slideContainer, { width }]}>
             {/* Visual Badge / Icon */}
-            <View style={[styles.iconCircle, { backgroundColor: item.iconBg }]}>
-              <Text style={styles.iconGraphic}>{item.icon}</Text>
+            <View style={[styles.iconCircle, { backgroundColor: item.iconBg }, isCompact && styles.iconCircleCompact]}>
+              <Text style={[styles.iconGraphic, isCompact && styles.iconGraphicCompact]}>{item.icon}</Text>
             </View>
 
             {/* Category Tag */}
-            <View style={styles.badgeWrap}>
+            <View style={[styles.badgeWrap, isCompact && styles.badgeWrapCompact]}>
               <Text style={styles.badgeText}>{t(item.badgeKey as any)}</Text>
             </View>
 
             {/* Title & Description */}
-            <Text style={styles.title}>{t(item.titleKey as any)}</Text>
-            <Text style={styles.description}>{t(item.descKey as any)}</Text>
+            <Text style={[styles.title, isCompact && styles.titleCompact]}>{t(item.titleKey as any)}</Text>
+            <Text style={[styles.description, isCompact && styles.descriptionCompact]}>{t(item.descKey as any)}</Text>
 
             {/* Bullet Points / Highlights Card */}
-            <View style={styles.pointsCard}>
+            <View style={[styles.pointsCard, isCompact && styles.pointsCardCompact]}>
               {item.points.map((ptKey: string, idx: number) => (
-                <View key={idx} style={styles.pointRow}>
-                  <View style={styles.checkBullet}>
-                    <Text style={styles.checkMark}>✓</Text>
+                <View key={idx} style={[styles.pointRow, isCompact && styles.pointRowCompact]}>
+                  <View style={[styles.checkBullet, isCompact && styles.checkBulletCompact]}>
+                    <Text style={[styles.checkMark, isCompact && styles.checkMarkCompact]}>✓</Text>
                   </View>
-                  <Text style={styles.pointText}>{t(ptKey as any)}</Text>
+                  <Text style={[styles.pointText, isCompact && styles.pointTextCompact]}>{t(ptKey as any)}</Text>
                 </View>
               ))}
             </View>
@@ -176,7 +177,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
       />
 
       {/* Bottom Footer: Dots & Next Action */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, isCompact && styles.footerCompact]}>
         {/* Pagination Dots */}
         <View style={styles.dotsContainer}>
           {slides.map((_, i) => (
@@ -192,14 +193,14 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
 
         {/* Next / Get Started Button */}
         <TouchableOpacity
-          style={styles.nextBtn}
+          style={[styles.nextBtn, isCompact && styles.nextBtnCompact]}
           activeOpacity={0.85}
           onPress={handleNext}
         >
           <Text style={styles.nextBtnText}>
             {currentIndex === slides.length - 1
-              ? `${t('onboarding.getStarted')} ›`
-              : `${t('onboarding.next')} ›`}
+              ? t('onboarding.getStarted')
+              : t('onboarding.next')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -367,5 +368,54 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  iconCircleCompact: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    marginBottom: 10,
+  },
+  iconGraphicCompact: {
+    fontSize: 36,
+  },
+  badgeWrapCompact: {
+    marginBottom: 8,
+    paddingVertical: 3,
+  },
+  titleCompact: {
+    fontSize: 19,
+    lineHeight: 24,
+    marginBottom: 6,
+  },
+  descriptionCompact: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  pointsCardCompact: {
+    padding: 12,
+    gap: 8,
+  },
+  pointRowCompact: {
+    gap: 8,
+  },
+  pointTextCompact: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  checkBulletCompact: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  checkMarkCompact: {
+    fontSize: 10,
+  },
+  footerCompact: {
+    paddingTop: 8,
+    gap: 14,
+  },
+  nextBtnCompact: {
+    paddingVertical: 12,
   },
 });
