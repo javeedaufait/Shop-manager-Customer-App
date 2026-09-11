@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   RefreshControl,
@@ -14,13 +15,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '../components/common/Header';
 import { ShopCard } from '../components/shops/ShopCard';
+import { NearbyProductCard } from '../components/products/NearbyProductCard';
 import { theme } from '../utils/theme';
 import { useLocalization } from '../hooks/useLocalization';
 import { useLocation } from '../hooks/useLocation';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { shopsApi } from '../api/shopsApi';
+import { searchApi } from '../api/searchApi';
 import { Shop } from '../types/shops';
+import { NearbyProductResult } from '../types/catalog';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../navigation/types';
 
@@ -37,6 +41,8 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchProducts, setSearchProducts] = useState<NearbyProductResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,13 +80,54 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [location?.latitude, location?.longitude, location?.areaName, locationLoading]);
+  }, [location?.latitude, location?.longitude, location?.areaName, locationLoading, t]);
 
   useEffect(() => {
     if (!locationLoading) {
       fetchShops();
     }
   }, [fetchShops, locationLoading]);
+
+  // Debounced product search across nearby shops
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchProducts([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const params: any = {
+          q: query,
+          radius: 30,
+          limit: 30,
+        };
+        if (location?.latitude && location?.longitude) {
+          params.lat = location.latitude;
+          params.lng = location.longitude;
+        } else if (location?.areaName) {
+          params.area = location.areaName;
+        }
+
+        const res = await searchApi.searchNearbyProducts(params);
+        if (res && Array.isArray(res.products)) {
+          setSearchProducts(res.products);
+        } else {
+          setSearchProducts([]);
+        }
+      } catch (err) {
+        console.warn('Error searching nearby products:', err);
+        setSearchProducts([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, location?.latitude, location?.longitude, location?.areaName]);
 
   // Hardware Back button handling for guest users
   useEffect(() => {
@@ -148,6 +195,22 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
     fetchShops();
   };
 
+  const handleShopPress = (shop: Shop) => {
+    navigation.navigate('ShopCatalog', {
+      shopId: shop.shop_id,
+      shopName: shop.name,
+      shop: shop,
+    });
+  };
+
+  const handleProductPress = (item: NearbyProductResult) => {
+    navigation.navigate('ProductDetail', {
+      product: item,
+      shopName: item.shop_name,
+      shopId: item.shop_id,
+    });
+  };
+
   const filteredShops = shops.filter((s) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
@@ -157,6 +220,8 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
       s.address.toLowerCase().includes(q)
     );
   });
+
+  const isSearchActive = searchQuery.trim().length > 0;
 
   const locationDisplayText = location?.areaName
     ? location.areaName
@@ -226,7 +291,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder={t('shops.searchPlaceholder')}
+          placeholder={t('search.placeholder')}
           placeholderTextColor={theme.colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -239,9 +304,9 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
         )}
       </View>
 
-      {/* Main Content Area: 4 States */}
+      {/* Main Content Area */}
       {isLoading && !refreshing ? (
-        /* State 1: Loading State */
+        /* State 1: Initial Loading State */
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>{t('shops.loadingShops')}</Text>
@@ -281,8 +346,84 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
             </TouchableOpacity>
           </View>
         </View>
+      ) : isSearchActive ? (
+        /* Search Active Mode */
+        isSearching && searchProducts.length === 0 && filteredShops.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>{t('search.searching')}</Text>
+          </View>
+        ) : !isSearching && searchProducts.length === 0 && filteredShops.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.stateEmoji}>🔍</Text>
+            <Text style={styles.stateTitle}>{t('search.noResultsTitle')}</Text>
+            <Text style={styles.stateSubtitle}>{t('search.noResultsSubtitle')}</Text>
+            <TouchableOpacity
+              style={styles.secondaryActionBtn}
+              onPress={() => setSearchQuery('')}
+            >
+              <Text style={styles.secondaryActionBtnText}>{t('search.clearSearch')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {isSearching && (
+              <View style={styles.searchingBanner}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.searchingBannerText}>{t('search.searching')}</Text>
+              </View>
+            )}
+
+            {/* Matching Products Section */}
+            {searchProducts.length > 0 && (
+              <View style={styles.searchSection}>
+                <View style={styles.listHeader}>
+                  <Text style={styles.feedTitle}>{t('search.nearbyResults')}</Text>
+                  <Text style={styles.storeCount}>
+                    {searchProducts.length} {t('search.productsFound')}
+                  </Text>
+                </View>
+                {searchProducts.map((item) => (
+                  <NearbyProductCard
+                    key={`prod-${item.shop_id}-${item.id}`}
+                    item={item}
+                    onPress={() => handleProductPress(item)}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Matching Shops Section */}
+            {filteredShops.length > 0 && (
+              <View
+                style={[
+                  styles.searchSection,
+                  searchProducts.length > 0 && { marginTop: theme.spacing.lg },
+                ]}
+              >
+                <View style={styles.listHeader}>
+                  <Text style={styles.feedTitle}>{t('search.shopsSection')}</Text>
+                  <Text style={styles.storeCount}>
+                    {filteredShops.length} {t('shops.totalStores')}
+                  </Text>
+                </View>
+                {filteredShops.map((shop) => (
+                  <ShopCard
+                    key={`shop-${shop.shop_id}`}
+                    shop={shop}
+                    onPress={() => handleShopPress(shop)}
+                  />
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        )
       ) : filteredShops.length === 0 ? (
-        /* State 2: Empty State */
+        /* Normal State 2: Empty Shops State */
         <View style={styles.centerContainer}>
           <Text style={styles.stateEmoji}>🏪</Text>
           <Text style={styles.stateTitle}>{t('shops.emptyTitle')}</Text>
@@ -295,7 +436,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           </TouchableOpacity>
         </View>
       ) : (
-        /* Standard Feed */
+        /* Normal Standard Feed */
         <FlatList
           data={filteredShops}
           keyExtractor={(item) => String(item.shop_id)}
@@ -319,13 +460,7 @@ export const NearbyShopsScreen: React.FC<NearbyShopsScreenProps> = ({ navigation
           renderItem={({ item }) => (
             <ShopCard
               shop={item}
-              onPress={() => {
-                navigation.navigate('ShopCatalog', {
-                  shopId: item.shop_id,
-                  shopName: item.name,
-                  shop: item,
-                });
-              }}
+              onPress={() => handleShopPress(item)}
             />
           )}
         />
@@ -467,6 +602,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textMuted,
     paddingHorizontal: 4,
+  },
+  searchingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+  },
+  searchingBannerText: {
+    ...theme.typography.caption,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  searchSection: {
+    marginBottom: theme.spacing.sm,
   },
   listContent: {
     paddingHorizontal: theme.spacing.xl,

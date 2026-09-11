@@ -35,3 +35,19 @@ export interface CategoryItem {
   name: string;
   count?: number;
 }
+
+export interface NearbyProductResult extends Product {
+  shop_id: number;
+  shop_name: string;
+  shop_address?: string;
+  distance_km?: number | null;
+  distance_text?: string | null;
+  pricing_type?: 'fixed' | 'store_priced';
+  is_store_priced?: boolean;
+}
+
+export interface NearbySearchResponse {
+  products: NearbyProductResult[];
+  pagination: PaginationInfo;
+  query: string;
+}
