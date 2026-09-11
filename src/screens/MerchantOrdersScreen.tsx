@@ -19,6 +19,7 @@ import { useAuth } from '../hooks/useAuth';
 import { merchantApi } from '../api/merchantApi';
 import { Order, OrderStatus } from '../types/orders';
 import { theme } from '../utils/theme';
+import { notificationService } from '../services/notificationService';
 
 type Props = NativeStackScreenProps<MerchantStackParamList, 'MerchantOrders'>;
 
@@ -36,6 +37,7 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -70,6 +72,24 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
     }, 250);
     return () => clearTimeout(timer);
   }, [fetchOrders]);
+
+  // Listen for real-time foreground order notifications
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribeToForegroundNotifications((notification) => {
+      const data = notification?.request?.content?.data;
+      const role = data?.target_role || data?.user_type;
+      const type = data?.type;
+      if (role === 'merchant' || type === 'merchant_new_order') {
+        fetchOrders();
+        setToastNotice(t('notifications.ordersUpdatedToast'));
+        const timer = setTimeout(() => {
+          setToastNotice(null);
+        }, 4000);
+        return () => clearTimeout(timer);
+      }
+    });
+    return () => unsubscribe();
+  }, [fetchOrders, t]);
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -327,6 +347,18 @@ export const MerchantOrdersScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </View>
       </View>
+
+      {/* Real-time Order Notification Toast */}
+      {toastNotice && (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.notificationNotice}
+          onPress={() => setToastNotice(null)}
+        >
+          <Text style={styles.notificationNoticeText}>{toastNotice}</Text>
+          <Text style={styles.notificationNoticeClose}>✕</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Fulfillment Status Scroll Tabs */}
       <View style={styles.tabsWrapper}>
@@ -729,5 +761,31 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     maxWidth: 280,
+  },
+  notificationNotice: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  notificationNoticeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#991B1B',
+    flex: 1,
+  },
+  notificationNoticeClose: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginLeft: 8,
+    padding: 2,
   },
 });

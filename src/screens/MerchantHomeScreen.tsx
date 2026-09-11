@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MerchantStackParamList } from '../navigation/types';
@@ -9,12 +9,30 @@ import { Button } from '../components/common/Button';
 import { RoleBadge } from '../components/common/RoleBadge';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalization } from '../hooks/useLocalization';
+import { notificationService } from '../services/notificationService';
 
 type Props = NativeStackScreenProps<MerchantStackParamList, 'MerchantHome'>;
 
 export const MerchantHomeScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { t } = useLocalization();
+
+  const [hasNewOrder, setHasNewOrder] = useState<boolean>(false);
+  const [newOrderInfo, setNewOrderInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribeToForegroundNotifications((notification) => {
+      const data = notification?.request?.content?.data;
+      const role = data?.target_role || data?.user_type;
+      const type = data?.type;
+      if (role === 'merchant' || type === 'merchant_new_order') {
+        setHasNewOrder(true);
+        const orderNum = data?.order_number || (data?.order_id ? `#${data.order_id}` : '');
+        setNewOrderInfo(orderNum);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const shop = user?.shop;
 
@@ -27,18 +45,51 @@ export const MerchantHomeScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.subtitle}>Welcome, {user?.name}</Text>
         </View>
 
+        {/* Foreground New Order Indicator Banner */}
+        {hasNewOrder && (
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.newOrderBanner}
+            onPress={() => {
+              setHasNewOrder(false);
+              navigation.navigate('MerchantOrders');
+            }}
+          >
+            <Text style={styles.newOrderBannerIcon}>🔔</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.newOrderBannerTitle}>
+                {newOrderInfo ? `${t('notifications.merchantNewOrderTitle')} (${newOrderInfo})` : t('notifications.merchantNewOrderTitle')}
+              </Text>
+              <Text style={styles.newOrderBannerSubtitle}>{t('notifications.newOrdersBanner')}</Text>
+            </View>
+            <View style={styles.newOrderBannerAction}>
+              <Text style={styles.newOrderBannerActionText}>›</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Store Orders Quick Action Card */}
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.ordersActionCard}
-          onPress={() => navigation.navigate('MerchantOrders')}
+          style={[styles.ordersActionCard, hasNewOrder && styles.ordersActionCardAlert]}
+          onPress={() => {
+            setHasNewOrder(false);
+            navigation.navigate('MerchantOrders');
+          }}
         >
           <View style={styles.ordersActionLeft}>
-            <View style={styles.ordersIconCircle}>
+            <View style={[styles.ordersIconCircle, hasNewOrder && { backgroundColor: '#FEE2E2' }]}>
               <Text style={{ fontSize: 24 }}>📦</Text>
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.ordersActionTitle}>{t('merchantOrders.title')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.ordersActionTitle}>{t('merchantOrders.title')}</Text>
+                {hasNewOrder && (
+                  <View style={styles.newOrderBadge}>
+                    <Text style={styles.newOrderBadgeText}>● {t('notifications.newOrderIndicator')}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.ordersActionSubtitle}>{t('merchantOrders.subtitle')}</Text>
             </View>
           </View>
@@ -273,5 +324,54 @@ const styles = StyleSheet.create({
   },
   logoutBtn: {
     width: '100%',
+  },
+  newOrderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  newOrderBannerIcon: {
+    fontSize: 22,
+  },
+  newOrderBannerTitle: {
+    ...theme.typography.smallBold,
+    color: '#991B1B',
+  },
+  newOrderBannerSubtitle: {
+    ...theme.typography.caption,
+    color: '#B91C1C',
+    marginTop: 2,
+  },
+  newOrderBannerAction: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newOrderBannerActionText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  ordersActionCardAlert: {
+    borderColor: '#F87171',
+    borderWidth: 1.5,
+  },
+  newOrderBadge: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.full,
+  },
+  newOrderBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

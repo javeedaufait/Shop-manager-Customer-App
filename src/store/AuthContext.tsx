@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUser(meData.user);
             await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(meData.user));
             // Register push notifications for restored session
-            notificationService.registerTokenWithBackend().catch((e) => console.log('[Push] Registration note:', e));
+            notificationService.registerTokenWithBackend(savedLang === 'ml' ? 'ml' : 'en').catch((e) => console.log('[Push] Registration note:', e));
           } else {
             // Invalid session
             await handleClearSession();
@@ -99,6 +99,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLanguageState(newLang);
     setI18nLanguage(newLang);
     await storageService.setItem(ENV.storageKeys.language, newLang);
+    if (token) {
+      notificationService.registerTokenWithBackend(newLang).catch((e) => console.log('[Push] Lang sync note:', e));
+    }
   };
 
   const login = async (payload: LoginPayload) => {
@@ -110,8 +113,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
     await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
 
-    // Register push token for logged-in user
-    notificationService.registerTokenWithBackend().catch((e) => console.log('[Push] Registration note:', e));
+    // Register push token for logged-in user with preferred language
+    notificationService.registerTokenWithBackend(language).catch((e) => console.log('[Push] Registration note:', e));
   };
 
   const register = async (payload: RegisterPayload) => {
@@ -123,8 +126,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await storageService.setSecureItem(ENV.storageKeys.authToken, data.token);
     await storageService.setItem(ENV.storageKeys.authUser, JSON.stringify(data.user));
 
-    // Register push token for newly registered user
-    notificationService.registerTokenWithBackend().catch((e) => console.log('[Push] Registration note:', e));
+    // Register push token for newly registered user with preferred language
+    notificationService.registerTokenWithBackend(language).catch((e) => console.log('[Push] Registration note:', e));
   };
 
   const logout = async () => {

@@ -73,7 +73,7 @@ export const notificationService = {
   /**
    * Register or refresh push token against authenticated user in backend.
    */
-  async registerTokenWithBackend(): Promise<string | null> {
+  async registerTokenWithBackend(lang?: 'en' | 'ml'): Promise<string | null> {
     await this.setupNotificationChannelAsync();
 
     const token = await this.getExpoPushTokenAsync();
@@ -89,6 +89,7 @@ export const notificationService = {
         token,
         platform,
         device_id: deviceId,
+        lang,
       });
 
       // Save token locally
@@ -120,14 +121,16 @@ export const notificationService = {
    * Deep-link notification tap handler.
    */
   handleNotificationTap(data: any): void {
-    if (!data || !data.order_id) {
-      return;
-    }
+    if (!data) return;
 
-    const orderId = Number(data.order_id);
-    const targetRole = data.target_role;
+    const rawId = data.order_id || data.orderId;
+    if (!rawId) return;
 
-    if (targetRole === 'merchant' || data.type === 'merchant_new_order') {
+    const orderId = Number(rawId);
+    const targetRole = data.target_role || data.user_type || data.userType;
+    const isMerchant = targetRole === 'merchant' || data.type === 'merchant_new_order';
+
+    if (isMerchant) {
       navigate('MerchantOrderDetails', { orderId });
     } else {
       navigate('OrderStatus', { orderId });
@@ -135,26 +138,63 @@ export const notificationService = {
   },
 
   /**
-   * Initialize notification listeners (foreground and background tap response).
+   * Foreground notification listeners list.
+   */
+  _foregroundListeners: new Set<(notification: Notifications.Notification) => void>(),
+
+  /**
+   * Subscribe to incoming foreground notifications.
+   */
+  subscribeToForegroundNotifications(callback: (notification: Notifications.Notification) => void): () => void {
+    this._foregroundListeners.add(callback);
+    return () => {
+      this._foregroundListeners.delete(callback);
+    };
+  },
+
+  /**
+   * Initialize notification listeners (foreground, background tap, token refresh, cold start).
    */
   initNotificationListeners(): () => void {
-    // 1. Check if app was launched from a notification tap
+    // 1. Cold start: check if app was launched directly from a notification tap
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response?.notification?.request?.content?.data) {
-        this.handleNotificationTap(response.notification.request.content.data);
-      }
-    });
-
-    // 2. Listen for notification taps while app is running / in background
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response?.notification?.request?.content?.data;
       if (data) {
         this.handleNotificationTap(data);
       }
     });
 
+    // 2. Background/Killed tap: listen for notification tap response
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (data) {
+        this.handleNotificationTap(data);
+      }
+    });
+
+    // 3. Foreground arrival: trigger foreground notification handlers
+    const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+      this._foregroundListeners.forEach((cb) => {
+        try {
+          cb(notification);
+        } catch (e) {
+          console.warn('Error in foreground notification listener:', e);
+        }
+      });
+    });
+
+    // 4. Token refresh listener: auto re-register if Expo rotates token
+    const tokenSubscription = Notifications.addPushTokenListener((token) => {
+      if (token?.data) {
+        this.registerTokenWithBackend();
+      }
+    });
+
     return () => {
-      subscription.remove();
+      responseSubscription.remove();
+      receivedSubscription.remove();
+      tokenSubscription.remove();
+      this._foregroundListeners.clear();
     };
   },
 };

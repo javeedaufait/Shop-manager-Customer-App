@@ -399,6 +399,9 @@ export const ml = {
       orderRejectedTitle: "ഓർഡർ അപ്‌ഡേറ്റ്",
       produceFinalizedTitle: "വില കണക്കാക്കി",
       merchantNewOrderTitle: "പുതിയ ഓർഡർ ലഭിച്ചു",
+      newOrderIndicator: "പുതിയത്",
+      newOrdersBanner: "പുതിയ ഓർഡർ ലഭിച്ചു! കാണാൻ ഇവിടെ തൊടുക.",
+      ordersUpdatedToast: "പുതിയ ഓർഡർ ലഭിച്ചു. പട്ടിക പുതുക്കി.",
     },
     onboarding: {
       skip: "ഒഴിവാക്കുക",

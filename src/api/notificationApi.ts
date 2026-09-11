@@ -5,6 +5,7 @@ export interface RegisterTokenPayload {
   token: string;
   platform?: 'android' | 'ios' | 'web';
   device_id?: string;
+  lang?: 'en' | 'ml';
 }
 
 export interface RegisterTokenResponse {

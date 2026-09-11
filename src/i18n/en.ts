@@ -399,6 +399,9 @@ export const en = {
       orderRejectedTitle: "Order Update",
       produceFinalizedTitle: "Produce Price Finalized",
       merchantNewOrderTitle: "New Order Received",
+      newOrderIndicator: "New",
+      newOrdersBanner: "New order received! Tap to view.",
+      ordersUpdatedToast: "New order received. Order list updated.",
     },
     onboarding: {
       skip: "Skip",

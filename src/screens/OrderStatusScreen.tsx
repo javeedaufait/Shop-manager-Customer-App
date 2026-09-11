@@ -19,6 +19,7 @@ import { useLocalization } from '../hooks/useLocalization';
 import { ordersApi } from '../api/ordersApi';
 import { Order, OrderStatus, PricingStatus, PaymentStatus } from '../types/orders';
 import { theme } from '../utils/theme';
+import { notificationService } from '../services/notificationService';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'OrderStatus'>;
 
@@ -116,6 +117,18 @@ export const OrderStatusScreen: React.FC<Props> = ({ navigation, route }) => {
       };
     }, [fetchStatus, order?.status])
   );
+
+  // Subscribe to real-time foreground order notifications
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribeToForegroundNotifications((notification) => {
+      const data = notification?.request?.content?.data;
+      const notifOrderId = data?.order_id || data?.orderId;
+      if (notifOrderId && Number(notifOrderId) === Number(orderId)) {
+        fetchStatus(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [orderId, fetchStatus]);
 
   const onRefresh = () => {
     setIsRefreshing(true);
