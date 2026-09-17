@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
@@ -31,6 +32,9 @@ export const notificationService = {
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#16a34a',
           sound: 'default',
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: false,
+          showBadge: true,
         });
       } catch (err) {
         console.warn('Failed to configure Android notification channel:', err);
@@ -62,7 +66,14 @@ export const notificationService = {
         return null;
       }
 
-      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId ??
+        Constants?.easConfig?.projectId ??
+        '5410b69f-d857-4d6f-acce-c9256a64819c';
+
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId,
+      });
       return tokenData.data;
     } catch (error) {
       console.warn('Error obtaining Expo push token:', error);
@@ -156,6 +167,9 @@ export const notificationService = {
    * Initialize notification listeners (foreground, background tap, token refresh, cold start).
    */
   initNotificationListeners(): () => void {
+    // Ensure Android notification channel is registered on cold start
+    this.setupNotificationChannelAsync().catch((err) => console.log('Channel init note:', err));
+
     // 1. Cold start: check if app was launched directly from a notification tap
     Notifications.getLastNotificationResponseAsync().then((response) => {
       const data = response?.notification?.request?.content?.data;

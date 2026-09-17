@@ -81,6 +81,16 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
     },
   ];
 
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems && viewableItems.length > 0 && typeof viewableItems[0].index === 'number') {
+      setCurrentIndex(viewableItems[0].index);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    viewAreaCoveragePercentThreshold: 50,
+  }).current;
+
   const handleFinish = async () => {
     try {
       await storageService.setItem(ENV.storageKeys.onboardingCompleted, 'true');
@@ -92,8 +102,10 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
       flatListRef.current?.scrollToIndex({
-        index: currentIndex + 1,
+        index: nextIndex,
         animated: true,
       });
     } else {
@@ -141,6 +153,21 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        getItemLayout={(_, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
+        onScrollToIndexFailed={(info) => {
+          setTimeout(() => {
+            flatListRef.current?.scrollToOffset({
+              offset: info.index * width,
+              animated: true,
+            });
+          }, 50);
+        }}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         onMomentumScrollEnd={(event) => {
           const index = Math.round(event.nativeEvent.contentOffset.x / width);
           setCurrentIndex(index);
@@ -181,8 +208,16 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
         {/* Pagination Dots */}
         <View style={styles.dotsContainer}>
           {slides.map((_, i) => (
-            <View
+            <TouchableOpacity
               key={i}
+              activeOpacity={0.7}
+              onPress={() => {
+                setCurrentIndex(i);
+                flatListRef.current?.scrollToIndex({
+                  index: i,
+                  animated: true,
+                });
+              }}
               style={[
                 styles.dot,
                 currentIndex === i ? styles.activeDot : styles.inactiveDot,
